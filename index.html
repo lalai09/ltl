@@ -33,14 +33,12 @@
   ::-webkit-scrollbar-track{background:transparent;}
   ::-webkit-scrollbar-thumb{background:var(--border); border-radius:4px;}
 
-  /* ---------- LOGIN MODAL ---------- */
+  /* ---------- LOGIN ---------- */
   #loginScreen{
-    display:none; position:fixed; inset:0; z-index:1200;
-    align-items:center; justify-content:center;
+    height:100vh; height:100dvh;
+    display:flex; align-items:center; justify-content:center;
     padding:20px;
-    background:rgba(0,0,0,0.7); backdrop-filter:blur(5px);
   }
-  #loginScreen.open{ display:flex; }
   .loginBox{
     background:linear-gradient(145deg, var(--panel), var(--panel2));
     border:1px solid var(--border);
@@ -93,7 +91,7 @@
 
   /* ---------- CHAT ---------- */
   #chatScreen{
-    display:flex; height:100vh; height:100dvh; flex-direction:column;
+    display:none; height:100vh; height:100dvh; flex-direction:column;
   }
   header{
     display:flex; align-items:center; justify-content:space-between;
@@ -109,9 +107,7 @@
   .headerAvatar{
     width:32px; height:32px; border-radius:50%;
     object-fit:cover; border:1px solid var(--border); background:var(--panel2);
-    cursor:pointer; transition:0.15s;
   }
-  .headerAvatar:hover{ box-shadow:0 0 0 2px var(--neon); }
   header h2{
     font-size:17px;
     background:linear-gradient(90deg, var(--neon), var(--neon2));
@@ -214,8 +210,6 @@
   }
   .msgRow .msg{ max-width:100%; }
 
-  
-  .guestHint{ font-size:11px; color:var(--muted); }
   @media(max-width:480px){
     .msg{max-width:85%;}
     header h2{font-size:15px;}
@@ -309,7 +303,7 @@
 <div id="loginScreen">
   <div class="loginBox">
     <h1>💬 Chat Chung</h1>
-    <p class="sub">Đăng nhập / Đăng ký để chat & chơi Nối Từ</p>
+    <p class="sub">Đăng nhập để tham gia phòng chat + chơi Nối Từ</p>
 
     <div class="field">
       <label>Tên đăng nhập</label>
@@ -325,7 +319,6 @@
       <button class="btnPrimary" id="loginBtn">Đăng nhập</button>
     </div>
     <div id="loginMsg"></div>
-    <button type="button" class="btnGhost" id="loginCloseBtn" style="width:100%;margin-top:12px">Đóng</button>
   </div>
 </div>
 
@@ -335,11 +328,11 @@
     <div class="title">
       <span class="dot"></span>
       <img id="headerAvatar" class="headerAvatar" src="" alt="avatar">
-      <h2 id="headerName">Khách</h2>
+      <h2 id="headerName"></h2>
     </div>
     <div class="userInfo">
       <span class="xuBadge" id="xuDisplay">💰 0 xu</span>
-      <!-- logout moved to avatar menu -->
+      <button class="logoutBtn" id="logoutBtn">Đăng xuất</button>
     </div>
   </header>
 
@@ -425,16 +418,6 @@
   </div>
 </div>
 
-
-<!-- ACCOUNT MENU (when logged in) -->
-<div id="accountOverlay" style="display:none;position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,0.55);align-items:center;justify-content:center;padding:20px">
-  <div class="loginBox" style="max-width:320px">
-    <h1 style="font-size:20px;margin-bottom:8px">Tài khoản</h1>
-    <p class="sub" id="accountNameLabel" style="margin-bottom:18px">—</p>
-    <button class="btnPrimary" id="accountLogoutBtn" style="width:100%">Đăng xuất</button>
-    <button class="btnGhost" id="accountCloseBtn" style="width:100%;margin-top:10px">Đóng</button>
-  </div>
-</div>
 <script>
   // ==== FIREBASE CONFIG ====
   const firebaseConfig = {
@@ -472,7 +455,6 @@
   let myChatColor = '';
   let myInv = { rename: 0, avatar: 0, color: 0 };
   const LS_KEY = 'chatchung_login';
-  const LS_PASS = 'chatchung_pass';
 
   const SHOP_PRICES = { rename: 50, avatar: 30, color: 40 };
 
@@ -657,48 +639,6 @@
   }
 
   // ========== AUTH & CHAT ==========
-  
-  
-  function setChatLocked(locked){
-    const input = document.getElementById('msgInput');
-    const btn = document.getElementById('sendBtn');
-    if (locked) {
-      input.disabled = true;
-      input.placeholder = 'Đăng nhập để nhắn tin (bấm vào avatar)...';
-      btn.disabled = true;
-      btn.style.opacity = '0.45';
-      btn.style.pointerEvents = 'none';
-    } else {
-      input.disabled = false;
-      input.placeholder = 'Nhập tin nhắn... (gõ /botnt để chơi nối từ)';
-      btn.disabled = false;
-      btn.style.opacity = '';
-      btn.style.pointerEvents = '';
-    }
-  }
-
-  function openAccountMenu(){
-    const ov = document.getElementById('accountOverlay');
-    ov.style.display = 'flex';
-    document.getElementById('accountNameLabel').textContent = myName || '';
-  }
-  function closeAccountMenu(){
-    document.getElementById('accountOverlay').style.display = 'none';
-  }
-
-  function openLoginModal(){
-    document.getElementById('loginScreen').classList.add('open');
-    document.getElementById('loginMsg').textContent = '';
-    // prefill saved
-    const saved = localStorage.getItem(LS_KEY);
-    const savedPass = localStorage.getItem(LS_PASS);
-    if (saved) usernameInput.value = saved;
-    if (savedPass) passwordInput.value = savedPass;
-  }
-  function closeLoginModal(){
-    document.getElementById('loginScreen').classList.remove('open');
-  }
-
   function showMsg(text, isError=true){
     loginMsg.style.color = isError ? 'var(--danger)' : 'var(--success)';
     loginMsg.textContent = text;
@@ -735,9 +675,8 @@
         xu: 0,
         createdAt: Date.now()
       });
-      showMsg('Đăng ký thành công!', false);
-      loginSuccess(name, 0, {}, pass);
-      setLoading(false);
+      showMsg('Đăng ký thành công! Đang đăng nhập...', false);
+      loginSuccess(name, 0);
     }catch(e){
       showMsg('Lỗi: ' + e.message);
       setLoading(false);
@@ -764,15 +703,14 @@
         setLoading(false);
         return;
       }
-      loginSuccess(data.displayName, data.xu || 0, data, pass);
-      setLoading(false);
+      loginSuccess(data.displayName, data.xu || 0, data);
     }catch(e){
       showMsg('Lỗi: ' + e.message);
       setLoading(false);
     }
   }
 
-  function loginSuccess(name, xu, extra, pass){
+  function loginSuccess(name, xu, extra){
     myName = name;
     myXu = xu || 0;
     extra = extra || {};
@@ -784,31 +722,16 @@
       color: (extra.inv && extra.inv.color) || 0
     };
     localStorage.setItem(LS_KEY, name);
-    if (pass != null && pass !== '') localStorage.setItem(LS_PASS, pass);
-    applyLoggedInUI();
-    closeLoginModal();
-  }
-
-  function applyLoggedInUI(){
-    document.getElementById('headerName').textContent = myName || 'Khách';
-    applyHeaderAvatar();
-    updateXuDisplay();
-    setChatLocked(!myName);
-    const av = document.getElementById('headerAvatar');
-    if (av) {
-      if (myName) {
-        av.title = 'Tài khoản: ' + myName + ' — bấm để đăng xuất';
-        av.onclick = () => openAccountMenu();
-      } else {
-        av.title = 'Bấm để Đăng nhập / Đăng ký';
-        av.onclick = () => openLoginModal();
-      }
-    }
+    enterChat();
   }
 
   function enterChat(){
-    loadWordListFromFirebase();
-    applyLoggedInUI();
+    loginScreen.style.display = 'none';
+    chatScreen.style.display = 'flex';
+    loadWordListFromFirebase(); // sync dictionary from Firebase
+    document.getElementById('headerName').textContent = myName;
+    applyHeaderAvatar();
+    updateXuDisplay();
     listenMessages();
     setupShop();
   }
@@ -829,16 +752,19 @@
   function logout(){
     clearGameTimer();
     game = null;
-    // Giữ LS_KEY + LS_PASS để lần sau tự đăng nhập / prefill
+    localStorage.removeItem(LS_KEY);
     myName = null;
     myXu = 0;
     myAvatar = '';
     myChatColor = '';
     myInv = { rename: 0, avatar: 0, color: 0 };
-    closeAccountMenu();
-    closeLoginModal();
-    applyLoggedInUI();
-    showMsg('', false);
+    messagesRef.off();
+    messagesDiv.innerHTML = '';
+    chatScreen.style.display = 'none';
+    loginScreen.style.display = 'flex';
+    usernameInput.value = '';
+    passwordInput.value = '';
+    loginMsg.textContent = '';
   }
 
   function formatTime(ts){
@@ -927,17 +853,11 @@
 
   async function sendMessage(){
     const text = msgInput.value.trim();
-    if(!text) return;
-    if(!myName){
-      openLoginModal();
-      showMsg('Hãy đăng nhập để gửi tin nhắn', true);
-      return;
-    }
+    if(!text || !myName) return;
 
     // Command /botnt — không hiện lệnh lên chat, chỉ bot ra từ
     if (text.toLowerCase() === '/botnt' || text.toLowerCase() === '/botnt ') {
       msgInput.value = '';
-      if (!myName) { openLoginModal(); showMsg('Đăng nhập để chơi Nối Từ', true); return; }
       startBotGame();
       return;
     }
@@ -1044,11 +964,6 @@
   }
 
   function openShop(){
-    if (!myName) {
-      openLoginModal();
-      showMsg('Đăng nhập để dùng cửa hàng', true);
-      return;
-    }
     refreshShopUI();
     document.getElementById('shopOverlay').classList.add('open');
     document.getElementById('shopMsg').textContent = '';
@@ -1241,43 +1156,32 @@
     if(e.key === 'Enter') login();
   });
 
-  // Vào chat ngay + tự đăng nhập nếu đã lưu TK/MK
+  // Auto login
   window.addEventListener('DOMContentLoaded', async () => {
-    // Hiện chat luôn
-    document.getElementById('headerAvatar').src = defaultAvatarUrl('Khách');
-    enterChat();
-
     const saved = localStorage.getItem(LS_KEY);
-    const savedPass = localStorage.getItem(LS_PASS);
-    if(saved && savedPass){
+    if(saved){
       const key = toKey(saved);
       try{
         const snap = await usersRef.child(key).get();
         if(snap.exists()){
           const data = snap.val();
-          if (data.password === savedPass) {
-            loginSuccess(data.displayName, data.xu || 0, data, savedPass);
-          } else {
-            // mật khẩu đổi — vẫn prefill tên
-            console.warn('Saved password mismatch');
-          }
+          myName = data.displayName;
+          myXu = data.xu || 0;
+          myAvatar = data.avatar || '';
+          myChatColor = data.chatColor || '';
+          myInv = {
+            rename: (data.inv && data.inv.rename) || 0,
+            avatar: (data.inv && data.inv.avatar) || 0,
+            color: (data.inv && data.inv.color) || 0
+          };
+          enterChat();
         } else {
           localStorage.removeItem(LS_KEY);
-          localStorage.removeItem(LS_PASS);
         }
       }catch(e){
         console.error(e);
       }
     }
-
-    const closeBtn = document.getElementById('loginCloseBtn');
-    if (closeBtn) closeBtn.onclick = closeLoginModal;
-    const accLogout = document.getElementById('accountLogoutBtn');
-    const accClose = document.getElementById('accountCloseBtn');
-    if (accLogout) accLogout.onclick = logout;
-    if (accClose) accClose.onclick = closeAccountMenu;
-    const accOv = document.getElementById('accountOverlay');
-    if (accOv) accOv.onclick = (e) => { if (e.target === accOv) closeAccountMenu(); };
   });
 </script>
 </body>
