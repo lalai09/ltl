@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Chat</title>
+<title>Chat Chung + Bot Nối Từ</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
@@ -446,10 +446,9 @@
     updateXuDisplay();
     await saveXu();
 
-    // Báo tên người trả lời đúng rồi kết thúc ván
-    postBot(`✅ ${myName} đã trả lời đúng!\n「${text}」\nGõ /botnt để chơi tiếp.`);
     game = null;
-    return true; // đã xử lý — vẫn post tin user bên dưới
+    // Trả về object để sendMessage biết cần báo sau khi đã push tin user
+    return { correct: true, word: text };
   }
 
   async function saveXu() {
@@ -631,14 +630,21 @@
 
     // If in game, try to treat as answer first
     if (game) {
-      const handled = await handlePlayerWord(text);
-      if (handled) {
-        // Still post the user's word so chat history is complete
-        messagesRef.push({
+      const result = await handlePlayerWord(text);
+      if (result && result.correct) {
+        // 1) Đẩy tin user TRƯỚC
+        await messagesRef.push({
           type: 'chat',
           sender: myName,
           text: text,
           time: Date.now()
+        });
+        // 2) Sau đó mới bot báo đúng (time +1ms để chắc chắn sau)
+        await messagesRef.push({
+          type: 'chat',
+          sender: BOT_NAME,
+          text: `✅ ${myName} đã trả lời đúng!\n「${result.word}」\nGõ /botnt để chơi tiếp.`,
+          time: Date.now() + 1
         });
         msgInput.value = '';
         return;
