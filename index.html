@@ -326,8 +326,8 @@
 <!-- LOGIN SCREEN -->
 <div id="loginScreen">
   <div class="loginBox">
-    <h1>💬 Chat Chung</h1>
-    <p class="sub">Đăng nhập để tham gia phòng chat + chơi Nối Từ</p>
+    <h1>💬 Chat</h1>
+    <p class="sub">Đăng nhập để tham gia phòng chat</p>
 
     <div class="field">
       <label>Tên đăng nhập</label>
@@ -367,7 +367,7 @@
   <div id="messages"></div>
 
   <div id="inputBar">
-    <input type="text" id="msgInput" placeholder="Nhập tin nhắn... (/botnt nối từ · /botvtv xáo chữ)" maxlength="500" autocomplete="off">
+    <input type="text" id="msgInput" placeholder="Nhập tin nhắn..." maxlength="500" autocomplete="off">
     <button id="sendBtn">
       <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
     </button>
@@ -379,7 +379,7 @@
 <div id="shopOverlay">
   <div class="shopBox">
     <h2>🛒 Cửa hàng</h2>
-    <p class="shopSub">Xu hiện có: <b id="shopXu" style="color:var(--success)">0</b> — Bấm xu trên header để mở lại</p>
+    <p class="shopSub">Xu hiện có: <b id="shopXu" style="color:var(--success)">0</b> — Bấm vào xu để mở lại</p>
 
     <div class="shopItem" data-item="rename">
       <div class="icon">🏷️</div>
@@ -396,8 +396,8 @@
         <div class="name">Thẻ đổi avatar</div>
         <div class="desc">Chọn ảnh từ thư viện trên máy của bạn</div>
       </div>
-      <div class="price">30 xu</div>
-      <button type="button" class="buyBtn" data-item="avatar" data-price="30">Mua</button>
+      <div class="price">75 xu</div>
+      <button type="button" class="buyBtn" data-item="avatar" data-price="75">Mua</button>
     </div>
     <div class="shopItem" data-item="color">
       <div class="icon">🎨</div>
@@ -405,8 +405,8 @@
         <div class="name">Thẻ đổi màu chat</div>
         <div class="desc">Đổi màu khung tin nhắn của bạn</div>
       </div>
-      <div class="price">40 xu</div>
-      <button type="button" class="buyBtn" data-item="color" data-price="40">Mua</button>
+      <div class="price">60 xu</div>
+      <button type="button" class="buyBtn" data-item="color" data-price="60">Mua</button>
     </div>
 
     <div class="invSection">
@@ -492,7 +492,7 @@
   let wordSet = new Set();
   let byFirst = {};
 
-  const BOT_NAME = '🤖 Bot Nối Từ';
+  const BOT_NAME = '🤖 Bot lor';
   const DEFAULT_BOT_AVATAR = 'https://api.dicebear.com/7.x/bottts/svg?seed=BotNoiTu';
   let BOT_AVATAR = DEFAULT_BOT_AVATAR;
 
@@ -672,9 +672,9 @@
         if (snap.exists() && !snap.val().solved) {
           const ch = snap.val();
           if (ch.type === 'scramble') {
-            postBot(`⏰ Hết thời gian (xáo chữ)!\nĐáp án: 「${ch.original}」`);
+            postBot(`⏰ Hết thời gian!\nĐáp án: 「${ch.original}」`);
           } else {
-            postBot(`⏰ Hết thời gian (nối từ)! Không ai trả lời đúng.`);
+            postBot(`⏰ Hết thời gian! Không ai trả lời đúng.`);
           }
           await challengeRef.remove();
         }
