@@ -909,6 +909,8 @@
   function logout(){
     clearChallengeTimer();
     currentChallenge = null;
+    lastSendAt = 0;
+    lastSendText = '';
     localStorage.removeItem(LS_KEY);
     myName = null;
     myXu = 0;
@@ -1009,6 +1011,40 @@
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
   }
 
+  // ========== CHỐNG SPAM ==========
+  let lastSendAt = 0;
+  let lastSendText = '';
+  const SPAM_COOLDOWN_MS = 1500;      // tối thiểu 1.5s giữa 2 tin
+  const SPAM_SAME_COOLDOWN_MS = 5000; // tin trùng phải cách 5s
+  let spamWarnAt = 0;
+
+  function showSpamWarn(msg) {
+    const now = Date.now();
+    // Không spam cả cảnh báo
+    if (now - spamWarnAt < 1200) return;
+    spamWarnAt = now;
+    postSystem(msg);
+  }
+
+  function checkSpam(text) {
+    const now = Date.now();
+    const gap = now - lastSendAt;
+    if (gap < SPAM_COOLDOWN_MS) {
+      showSpamWarn('⏳ Gửi chậm thôi, đợi ' + Math.ceil((SPAM_COOLDOWN_MS - gap) / 1000) + 's nữa.');
+      return true;
+    }
+    if (text === lastSendText && gap < SPAM_SAME_COOLDOWN_MS) {
+      showSpamWarn('⏳ Đừng gửi trùng tin nhắn liên tục.');
+      return true;
+    }
+    return false;
+  }
+
+  function markSent(text) {
+    lastSendAt = Date.now();
+    lastSendText = text;
+  }
+
   async function sendMessage(){
     const text = msgInput.value.trim();
     if(!text || !myName) return;
@@ -1017,22 +1053,33 @@
 
     // Command /botnt — không hiện lệnh lên chat, chỉ bot ra từ
     if (lower === '/botnt' || lower === '/botnt ') {
+      if (checkSpam(lower)) return;
       msgInput.value = '';
+      markSent(lower);
       startBotGame();
       return;
     }
 
     // Command /botvtv — xáo trộn chữ cái
     if (lower === '/botvtv' || lower === '/botvtv ') {
+      if (checkSpam(lower)) return;
       msgInput.value = '';
+      markSent(lower);
       startScrambleGame();
       return;
     }
 
     // Thử trả lời challenge đang mở (ai cũng được)
+    // Cho phép trả lời game bỏ qua cooldown tin thường (vẫn chặn spam cực nhanh)
     if (currentChallenge && !currentChallenge.solved) {
+      const now = Date.now();
+      if (now - lastSendAt < 600) {
+        showSpamWarn('⏳ Chậm lại một chút.');
+        return;
+      }
       const result = await tryClaimAnswer(text);
       if (result && result.correct) {
+        markSent(text);
         const userPayload = {
           type: 'chat',
           sender: myName,
@@ -1056,6 +1103,9 @@
       }
     }
 
+    // Tin thường — áp chống spam đầy đủ
+    if (checkSpam(text)) return;
+
     // Normal message
     const payload = {
       type: 'chat',
@@ -1066,6 +1116,7 @@
     if (myChatColor) payload.chatColor = myChatColor;
     if (myAvatar) payload.avatar = myAvatar;
     messagesRef.push(payload);
+    markSent(text);
     msgInput.value = '';
   }
 
