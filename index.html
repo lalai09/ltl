@@ -339,7 +339,7 @@
     </div>
     <div class="userInfo">
       <span class="xuBadge" id="xuDisplay">💰 0 xu</span>
-      <button class="logoutBtn" id="logoutBtn">Đăng xuất</button>
+      <!-- logout moved to avatar menu -->
     </div>
   </header>
 
@@ -425,6 +425,16 @@
   </div>
 </div>
 
+
+<!-- ACCOUNT MENU (when logged in) -->
+<div id="accountOverlay" style="display:none;position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,0.55);align-items:center;justify-content:center;padding:20px">
+  <div class="loginBox" style="max-width:320px">
+    <h1 style="font-size:20px;margin-bottom:8px">Tài khoản</h1>
+    <p class="sub" id="accountNameLabel" style="margin-bottom:18px">—</p>
+    <button class="btnPrimary" id="accountLogoutBtn" style="width:100%">Đăng xuất</button>
+    <button class="btnGhost" id="accountCloseBtn" style="width:100%;margin-top:10px">Đóng</button>
+  </div>
+</div>
 <script>
   // ==== FIREBASE CONFIG ====
   const firebaseConfig = {
@@ -648,6 +658,34 @@
 
   // ========== AUTH & CHAT ==========
   
+  
+  function setChatLocked(locked){
+    const input = document.getElementById('msgInput');
+    const btn = document.getElementById('sendBtn');
+    if (locked) {
+      input.disabled = true;
+      input.placeholder = 'Đăng nhập để nhắn tin (bấm vào avatar)...';
+      btn.disabled = true;
+      btn.style.opacity = '0.45';
+      btn.style.pointerEvents = 'none';
+    } else {
+      input.disabled = false;
+      input.placeholder = 'Nhập tin nhắn... (gõ /botnt để chơi nối từ)';
+      btn.disabled = false;
+      btn.style.opacity = '';
+      btn.style.pointerEvents = '';
+    }
+  }
+
+  function openAccountMenu(){
+    const ov = document.getElementById('accountOverlay');
+    ov.style.display = 'flex';
+    document.getElementById('accountNameLabel').textContent = myName || '';
+  }
+  function closeAccountMenu(){
+    document.getElementById('accountOverlay').style.display = 'none';
+  }
+
   function openLoginModal(){
     document.getElementById('loginScreen').classList.add('open');
     document.getElementById('loginMsg').textContent = '';
@@ -755,22 +793,24 @@
     document.getElementById('headerName').textContent = myName || 'Khách';
     applyHeaderAvatar();
     updateXuDisplay();
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) logoutBtn.style.display = myName ? '' : 'none';
+    setChatLocked(!myName);
     const av = document.getElementById('headerAvatar');
-    if (av) av.title = myName ? ('Tài khoản: ' + myName + ' — bấm để đăng nhập/đăng ký') : 'Bấm để Đăng nhập / Đăng ký';
+    if (av) {
+      if (myName) {
+        av.title = 'Tài khoản: ' + myName + ' — bấm để đăng xuất';
+        av.onclick = () => openAccountMenu();
+      } else {
+        av.title = 'Bấm để Đăng nhập / Đăng ký';
+        av.onclick = () => openLoginModal();
+      }
+    }
   }
 
   function enterChat(){
-    // Chat luôn hiện; chỉ cập nhật UI + listeners
     loadWordListFromFirebase();
     applyLoggedInUI();
     listenMessages();
     setupShop();
-    // click avatar → login/register
-    const av = document.getElementById('headerAvatar');
-    av.onclick = () => openLoginModal();
-    av.title = myName ? 'Tài khoản: ' + myName + ' (bấm để đăng nhập lại)' : 'Bấm để Đăng nhập / Đăng ký';
   }
 
   function applyHeaderAvatar(){
@@ -795,10 +835,9 @@
     myAvatar = '';
     myChatColor = '';
     myInv = { rename: 0, avatar: 0, color: 0 };
-    document.getElementById('headerName').textContent = 'Khách';
-    document.getElementById('headerAvatar').src = defaultAvatarUrl('Khách');
-    updateXuDisplay();
+    closeAccountMenu();
     closeLoginModal();
+    applyLoggedInUI();
     showMsg('', false);
   }
 
@@ -1233,6 +1272,12 @@
 
     const closeBtn = document.getElementById('loginCloseBtn');
     if (closeBtn) closeBtn.onclick = closeLoginModal;
+    const accLogout = document.getElementById('accountLogoutBtn');
+    const accClose = document.getElementById('accountCloseBtn');
+    if (accLogout) accLogout.onclick = logout;
+    if (accClose) accClose.onclick = closeAccountMenu;
+    const accOv = document.getElementById('accountOverlay');
+    if (accOv) accOv.onclick = (e) => { if (e.target === accOv) closeAccountMenu(); };
   });
 </script>
 </body>
