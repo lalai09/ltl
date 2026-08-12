@@ -594,13 +594,23 @@
     }
   }
 
-  // Hết giờ: xóa challenge im lặng (chỉ client nào start mới set timeout)
+  // Còn challenge đang mở (chưa giải, chưa hết giờ)?
+  function isChallengeActive() {
+    if (!currentChallenge || currentChallenge.solved) return false;
+    const limit = currentChallenge.type === 'scramble' ? SCRAMBLE_TIME_LIMIT : NOITU_TIME_LIMIT;
+    return Date.now() - (currentChallenge.startedAt || 0) <= limit;
+  }
+
+  // Hết giờ: thông báo rồi xóa challenge (client nào start mới set timeout)
   function scheduleChallengeExpire(limitMs) {
     clearChallengeTimer();
     challengeTimer = setTimeout(async () => {
       try {
         const snap = await challengeRef.get();
         if (snap.exists() && !snap.val().solved) {
+          const ch = snap.val();
+          const label = ch.type === 'scramble' ? 'xáo chữ' : 'nối từ';
+          postBot(`⏰ Hết thời gian (${label})! Không ai trả lời đúng.`);
           await challengeRef.remove();
         }
       } catch (e) {}
@@ -610,6 +620,11 @@
   async function startBotGame() {
     if (!WORD_LIST.length) {
       console.warn('Chưa có từ điển bot_words');
+      return;
+    }
+    // Đang có ván khác → không cho gọi
+    if (isChallengeActive()) {
+      postBot('⚠️ Đang có ván chơi. Hãy đợi hết giờ hoặc ai đó trả lời xong rồi gọi lại.');
       return;
     }
     const first = pickRandomWord(new Set());
@@ -626,7 +641,7 @@
     try {
       await challengeRef.set(payload);
       postBot(`「${first}」`);
-      scheduleChallengeExpire(NOITU_TIME_LIMIT);
+      scheduleChallengeExpire(NOITU_TIME_LIMIT); // 15s
     } catch (e) {
       console.error('startBotGame', e);
     }
@@ -635,6 +650,11 @@
   async function startScrambleGame() {
     if (!WORD_LIST.length) {
       console.warn('Chưa có từ điển bot_words');
+      return;
+    }
+    // Đang có ván khác → không cho gọi
+    if (isChallengeActive()) {
+      postBot('⚠️ Đang có ván chơi. Hãy đợi hết giờ hoặc ai đó trả lời xong rồi gọi lại.');
       return;
     }
     let word = null;
@@ -665,7 +685,7 @@
     try {
       await challengeRef.set(payload);
       postBot(`🔀 「${display}」`);
-      scheduleChallengeExpire(SCRAMBLE_TIME_LIMIT);
+      scheduleChallengeExpire(SCRAMBLE_TIME_LIMIT); // 30s
     } catch (e) {
       console.error('startScrambleGame', e);
     }
