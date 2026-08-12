@@ -3,240 +3,258 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Chat Chung</title>
+<title>Chat Chung + Bot Nối Từ</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
   :root{
-    --bg-deep:#1288c9;
-    --bg-mid:#29b6f6;
-    --bg-light:#5cd0ff;
-    --gold:#ffcd3c;
-    --gold-dark:#e0a900;
-    --panel:#ffffff;
-    --text:#111318;
-    --text-dim:#4a6274;
-    --ink:#111111;
+    --bg:#0a0e17;
+    --panel:#111826;
+    --panel2:#161f2e;
+    --border:#233047;
+    --neon:#00e5ff;
+    --neon2:#7c4dff;
+    --text:#e6f1ff;
+    --muted:#7d8aa3;
+    --danger:#ff4d6d;
+    --success:#00e676;
   }
-  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none;}
-  html,body{
-    margin:0; padding:0; height:100%; width:100%;
-    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
-    background:linear-gradient(180deg,#4fc3f7 0%, #29b6f6 55%, #1288c9 100%);
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html, body{ height:100%; }
+  body{
+    font-family:'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    background:radial-gradient(circle at 20% 10%, #0d1626 0%, #060a12 60%, #04060a 100%);
     color:var(--text);
+    height:100vh;
+    height:100dvh;
     overflow:hidden;
-    touch-action:manipulation;
   }
-  #app{
-    position:relative; width:100%; height:100%; max-width:520px; margin:0 auto;
-    display:flex; flex-direction:column; overflow:hidden;
-    box-shadow:0 0 40px rgba(0,0,0,.5);
+  ::-webkit-scrollbar{width:8px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--border); border-radius:4px;}
+
+  /* ---------- LOGIN ---------- */
+  #loginScreen{
+    height:100vh; height:100dvh;
+    display:flex; align-items:center; justify-content:center;
+    padding:20px;
   }
-  @media (min-width:701px){
-    #app{ max-width:900px; border-radius:0; box-shadow:none; }
+  .loginBox{
+    background:linear-gradient(145deg, var(--panel), var(--panel2));
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:36px 30px;
+    width:100%; max-width:380px;
+    box-shadow:0 0 40px rgba(0,229,255,0.08), 0 10px 40px rgba(0,0,0,0.5);
+  }
+  .loginBox h1{
+    text-align:center; font-size:26px; margin-bottom:6px;
+    background:linear-gradient(90deg, var(--neon), var(--neon2));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .loginBox p.sub{
+    text-align:center; color:var(--muted); font-size:13px; margin-bottom:26px;
+  }
+  .field{ margin-bottom:16px; }
+  .field label{
+    display:block; font-size:12px; color:var(--muted); margin-bottom:6px;
+  }
+  .field input{
+    width:100%; padding:12px 14px;
+    background:#0b1220; border:1px solid var(--border);
+    border-radius:10px; color:var(--text); font-size:15px;
+    outline:none; transition:0.2s;
+  }
+  .field input:focus{
+    border-color:var(--neon);
+    box-shadow:0 0 0 3px rgba(0,229,255,0.15);
+  }
+  .btnRow{ display:flex; gap:10px; margin-top:22px; }
+  button{ cursor:pointer; font-family:inherit; border:none; }
+  .btnPrimary{
+    flex:1; padding:13px; border-radius:10px;
+    background:linear-gradient(90deg, var(--neon), var(--neon2));
+    color:#04101a; font-weight:700; font-size:15px; transition:0.2s;
+  }
+  .btnPrimary:hover{filter:brightness(1.1); transform:translateY(-1px);}
+  .btnPrimary:disabled{opacity:0.6; cursor:not-allowed; transform:none;}
+  .btnGhost{
+    flex:1; padding:13px; border-radius:10px;
+    background:transparent; border:1px solid var(--border);
+    color:var(--text); font-size:15px; transition:0.2s;
+  }
+  .btnGhost:hover{border-color:var(--neon2); color:var(--neon2);}
+  #loginMsg{
+    margin-top:14px; text-align:center; font-size:13px;
+    min-height:18px; color:var(--danger);
   }
 
-  /* HEADER */
-  #header{
+  /* ---------- CHAT ---------- */
+  #chatScreen{
+    display:none; height:100vh; height:100dvh; flex-direction:column;
+  }
+  header{
     display:flex; align-items:center; justify-content:space-between;
-    padding:10px 12px; background:#29b6f6;
-    border-bottom:4px solid var(--ink); z-index:20; flex-shrink:0;
+    padding:14px 18px;
+    background:linear-gradient(90deg, var(--panel), var(--panel2));
+    border-bottom:1px solid var(--border);
   }
-  #wcBrand{display:flex; align-items:center; gap:8px; flex:1;}
-  #wcChatIcon{
-    width:34px; height:34px; border-radius:50% 50% 50% 4px; background:#fff; color:#111;
-    display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0;
-    box-shadow:0 2px 0 rgba(0,0,0,.25);
+  header .title{ display:flex; align-items:center; gap:10px; }
+  header .title .dot{
+    width:10px; height:10px; border-radius:50%;
+    background:var(--success); box-shadow:0 0 8px var(--success);
   }
-  #wcChatIcon svg{width:19px; height:19px; display:block;}
-  #wcChatText{
-    font-weight:900; font-size:20px; color:#111; letter-spacing:.3px;
-    font-family:'Baloo 2','Comic Sans MS',system-ui,sans-serif; text-transform:lowercase;
+  .headerAvatar{
+    width:32px; height:32px; border-radius:50%;
+    object-fit:cover; border:1px solid var(--border); background:var(--panel2);
   }
-  #btnGoArena{
-    background:#ffcd3c; color:#1a1200; font-weight:900; font-size:14px;
-    border:3px solid #111; border-radius:16px; padding:9px 16px;
-    box-shadow:0 3px 0 #a5720a; cursor:pointer; flex-shrink:0; white-space:nowrap;
+  header h2{
+    font-size:17px;
+    background:linear-gradient(90deg, var(--neon), var(--neon2));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
   }
-  #btnGoArena:active{transform:translateY(2px); box-shadow:0 1px 0 #a5720a;}
-  .back-btn{
-    border:2px solid var(--ink); background:#fff; color:var(--text);
-    font-size:17px; cursor:pointer; width:34px; height:34px; border-radius:50%;
-    display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-right:8px;
+  header .userInfo{
+    display:flex; align-items:center; gap:12px;
+    font-size:13px; color:var(--muted);
   }
-  .back-btn:active{transform:scale(0.9);}
+  header .userInfo b{color:var(--neon);}
+  .xuBadge{
+    background:rgba(0,230,118,0.15); border:1px solid var(--success);
+    color:var(--success); padding:4px 10px; border-radius:20px;
+    font-size:12px; font-weight:700;
+  }
+  .logoutBtn{
+    padding:7px 14px; border-radius:8px;
+    background:transparent; border:1px solid var(--border);
+    color:var(--muted); font-size:12px; transition:0.2s;
+  }
+  .logoutBtn:hover{border-color:var(--danger); color:var(--danger);}
 
-  /* CHAT AREA */
-  #chatMessages{
-    flex:1; overflow-y:auto; padding:10px 12px;
-    display:flex; flex-direction:column; gap:10px; background:#29b6f6;
+  #messages{
+    flex:1; overflow-y:auto; padding:16px;
+    display:flex; flex-direction:column; gap:10px;
   }
-  .msg{display:flex; gap:8px; align-items:flex-start; max-width:85%;}
-  .msg .av{
-    font-size:20px; flex-shrink:0; width:38px; height:38px; border-radius:50%;
-    overflow:hidden; display:flex; align-items:center; justify-content:center;
-    background:#fff; border:3px solid #111; cursor:pointer;
+  .msg{
+    max-width:75%; padding:10px 14px; border-radius:14px;
+    font-size:14.5px; line-height:1.4; word-wrap:break-word;
+    animation:fadeIn 0.2s ease;
   }
-  .msg .av img{width:100%; height:100%; object-fit:cover; border-radius:50%; display:block;}
-  .msg .bubble2{
-    background:#fff; color:#111; border:3px solid #111;
-    border-radius:16px 16px 16px 4px; padding:9px 13px;
-    font-size:13.5px; font-weight:600; word-break:break-word; overflow-wrap:anywhere;
+  @keyframes fadeIn{
+    from{opacity:0; transform:translateY(6px);}
+    to{opacity:1; transform:translateY(0);}
   }
   .msg .name{
-    font-size:11.5px; color:#fff; font-weight:800; margin-bottom:3px;
-    text-shadow:0 1px 2px rgba(0,0,0,.4); cursor:pointer;
+    font-size:11.5px; font-weight:700; margin-bottom:3px; color:var(--neon2);
   }
-  .msg .msgTime{
-    font-size:10px; color:#fff; opacity:.8; margin-top:2px;
-    text-shadow:0 1px 2px rgba(0,0,0,.4);
+  .msg .time{
+    font-size:10px; color:var(--muted); margin-top:4px; text-align:right;
   }
-  .msg.me .msgTime{text-align:right;}
-  .msg.me .name{text-align:right;}
-  .msg.me{align-self:flex-end; flex-direction:row-reverse;}
-  .msg.me .bubble2{
-    background:#ffcd3c; color:#1a1200; border:3px solid #111;
-    border-radius:16px 16px 4px 16px;
+  .msg.mine{
+    align-self:flex-end;
+    background:linear-gradient(135deg, rgba(0,229,255,0.18), rgba(124,77,255,0.18));
+    border:1px solid rgba(0,229,255,0.3);
+    border-bottom-right-radius:4px;
   }
-  .msg.sys{align-self:center; max-width:95%;}
-  .msg.sys .bubble2{
-    background:#fff8e1; border:2px solid var(--gold-dark); color:#7a5600;
-    font-weight:700; text-align:center; font-size:12.5px;
+  .msg.mine .name{display:none;}
+  .msg.theirs{
+    align-self:flex-start;
+    background:var(--panel2); border:1px solid var(--border);
+    border-bottom-left-radius:4px;
   }
-  .msg.sys.noitu .bubble2{background:#e7f6ff; border:2px solid #1288c9; color:#0b4f75;}
-  .msg.sys.noituWin .bubble2{background:#fff3cf; border:2px solid var(--gold-dark); color:#7a5600;}
-  .msg.sys.vtv .bubble2{background:#f3e8ff; border:2px solid #8b3fd1; color:#4a1a7a;}
-  .msg.sys.vtvWin .bubble2{background:#fff3cf; border:2px solid var(--gold-dark); color:#7a5600;}
+  .msg.bot{
+    align-self:flex-start;
+    background:linear-gradient(135deg, rgba(124,77,255,0.2), rgba(0,229,255,0.12));
+    border:1px solid rgba(124,77,255,0.4);
+    border-bottom-left-radius:4px;
+  }
+  .msg.bot .name{ color:var(--neon); }
+  .msg.system{
+    align-self:center; background:transparent;
+    color:var(--muted); font-size:12px; font-style:italic;
+  }
 
-  .roomInviteCard{
-    background:#fff; border:3px solid var(--ink); border-radius:14px; padding:10px 12px; min-width:190px;
+  #inputBar{
+    display:flex; gap:10px; padding:14px 16px;
+    background:var(--panel); border-top:1px solid var(--border);
   }
-  .roomInviteCard .ricTitle{font-size:12.5px; font-weight:800; color:var(--gold-dark); display:flex; align-items:center; gap:6px;}
-  .roomInviteCard .ricBet{font-size:12px; color:var(--text-dim); margin:4px 0 8px;}
-  .roomInviteCard .ricJoinBtn{
-    width:100%; border:3px solid var(--ink); border-radius:10px; padding:8px; font-weight:800; font-size:12.5px;
-    background:linear-gradient(180deg,#ffe08a,var(--gold-dark)); color:#3a2400;
+  #msgInput{
+    flex:1; padding:13px 16px;
+    background:#0b1220; border:1px solid var(--border);
+    border-radius:24px; color:var(--text); font-size:15px; outline:none;
   }
-  .roomInviteCard .ricJoinBtn:disabled{opacity:.5;}
+  #msgInput:focus{
+    border-color:var(--neon);
+    box-shadow:0 0 0 3px rgba(0,229,255,0.12);
+  }
+  #sendBtn{
+    width:46px; height:46px; border-radius:50%;
+    background:linear-gradient(135deg, var(--neon), var(--neon2));
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0; transition:0.2s;
+  }
+  #sendBtn:hover{filter:brightness(1.15); transform:scale(1.05);}
+  #sendBtn svg{width:20px; height:20px; fill:#04101a;}
 
-  #chatInputBar{
-    display:flex; gap:8px; padding:10px 12px 12px;
-    border-top:5px solid #000; background:#29b6f6; flex-shrink:0;
+  @media(max-width:480px){
+    .msg{max-width:85%;}
+    header h2{font-size:15px;}
+    header .userInfo{font-size:11px;}
   }
-  #chatInputBar input{
-    flex:1; background:#fff; border:3px solid #111; border-radius:20px;
-    padding:10px 16px; color:#111; font-size:14px; font-weight:600; outline:none;
-  }
-  #chatInputBar input::placeholder{color:#888;}
-  #chatInputBar input:disabled{background:#eee; color:#999; cursor:not-allowed;}
-  #chatInputBar button:disabled{opacity:.5; cursor:not-allowed;}
-  #chatInputBar button{
-    background:#ffcd3c; color:#1a1200; border:3px solid #111; border-radius:50%;
-    width:44px; height:44px; font-size:18px; flex-shrink:0;
-    box-shadow:0 3px 0 #a5720a; cursor:pointer;
-  }
-  #chatInputBar button:active{transform:translateY(2px); box-shadow:0 1px 0 #a5720a;}
-
-  /* TOAST */
-  #toastWrap{
-    position:absolute; top:56px; left:50%; transform:translateX(-50%);
-    z-index:200; display:flex; flex-direction:column; gap:6px; align-items:center; pointer-events:none;
-  }
-  .toast{
-    background:#fff; border:2px solid var(--ink); color:#111;
-    padding:8px 16px; border-radius:20px; font-size:13px; font-weight:700;
-    animation:toastIn .3s;
-  }
-  @keyframes toastIn{ from{opacity:0; transform:translateY(-10px);} to{opacity:1; transform:translateY(0);} }
-
-  /* PROFILE MODAL */
-  #profileOverlay{
-    display:none; position:fixed; inset:0; background:rgba(0,0,0,.5);
-    z-index:999; align-items:center; justify-content:center;
-  }
-  #profileCard{
-    background:var(--panel); border:3px solid var(--ink); border-radius:18px;
-    padding:16px; width:min(320px,86vw); position:relative;
-  }
-  .profileTopRow{display:flex; align-items:center; gap:10px; margin-bottom:12px;}
-  .profileAvatarCircle{
-    width:60px; height:60px; border-radius:50%; background:var(--gold); color:#3a2400;
-    border:3px solid var(--ink); flex-shrink:0; display:flex; align-items:center; justify-content:center;
-    font-size:28px; overflow:hidden;
-  }
-  .profileAvatarCircle img{width:100%; height:100%; object-fit:cover; display:block;}
-  .profileNameBox{
-    flex:1; min-width:0; background:var(--panel); border:3px solid var(--ink); border-radius:14px;
-    padding:12px 10px; font-weight:800; font-size:14.5px; color:var(--text); text-align:center;
-    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  }
-  #profileKbBtn{
-    display:none; width:100%; margin-top:12px; padding:11px 10px; border-radius:12px;
-    border:3px solid var(--ink); background:linear-gradient(180deg,#7fe0a0,#3fbf6d); color:#083a1c;
-    font-weight:900; font-size:14px; cursor:pointer; align-items:center; justify-content:center; gap:6px;
-  }
-  #profileKbBtn:active{ transform:translateY(1px); }
-  #profileKbBtn.sent{ background:linear-gradient(180deg,#dfe6ee,#c3cbd6); color:#3a4552; cursor:default; }
-
-  ::-webkit-scrollbar{width:5px;}
-  ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.2); border-radius:10px;}
 </style>
 </head>
 <body>
-<div id="app">
 
-  <!-- HEADER -->
-  <div id="header">
-    <div style="display:flex; align-items:center;">
-      <button class="back-btn" onclick="goBack()">←</button>
-      <span id="wcBrand">
-        <span id="wcChatIcon">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 3C6.48 3 2 6.58 2 11c0 2.36 1.28 4.48 3.3 5.94-.1.98-.42 2.24-1.2 3.36-.15.22.03.51.3.47 1.86-.27 3.36-1 4.36-1.63A11.5 11.5 0 0 0 12 19c5.52 0 10-3.58 10-8s-4.48-8-10-8Z" fill="#111"/>
-            <circle cx="8" cy="11" r="1.3" fill="#fff"/>
-            <circle cx="12" cy="11" r="1.3" fill="#fff"/>
-            <circle cx="16" cy="11" r="1.3" fill="#fff"/>
-          </svg>
-        </span>
-        <span id="wcChatText">chat chung</span>
-      </span>
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+  <div class="loginBox">
+    <h1>💬 Chat Chung</h1>
+    <p class="sub">Đăng nhập để tham gia phòng chat + chơi Nối Từ</p>
+
+    <div class="field">
+      <label>Tên đăng nhập</label>
+      <input type="text" id="username" placeholder="Nhập tên của bạn" maxlength="20" autocomplete="off">
     </div>
-    <button id="btnGoArena">Đấu trường</button>
-  </div>
-
-  <!-- CHAT MESSAGES -->
-  <div id="chatMessages"></div>
-
-  <!-- INPUT -->
-  <div id="chatInputBar">
-    <input type="text" id="worldChatInput" placeholder="Nhắn gì đó cho mọi người..." maxlength="300">
-    <button id="worldChatSendBtn">➤</button>
-  </div>
-
-  <div id="toastWrap"></div>
-
-  <!-- PROFILE MODAL -->
-  <div id="profileOverlay">
-    <div id="profileCard">
-      <button id="profileCloseBtn" style="position:absolute; top:8px; right:10px; border:none; background:none; font-size:20px; cursor:pointer;">✕</button>
-      <div class="profileTopRow">
-        <div class="profileAvatarCircle" id="profileAvatar">👤</div>
-        <div class="profileNameBox" id="profileNickname"></div>
-      </div>
-      <button id="profileKbBtn" onclick="window.__sendKbRequest && window.__sendKbRequest()">🤝 Kết bạn</button>
+    <div class="field">
+      <label>Mật khẩu</label>
+      <input type="password" id="password" placeholder="Nhập mật khẩu" maxlength="30" autocomplete="off">
     </div>
-  </div>
 
+    <div class="btnRow">
+      <button class="btnGhost" id="registerBtn">Đăng ký</button>
+      <button class="btnPrimary" id="loginBtn">Đăng nhập</button>
+    </div>
+    <div id="loginMsg"></div>
+  </div>
+</div>
+
+<!-- CHAT SCREEN -->
+<div id="chatScreen">
+  <header>
+    <div class="title">
+      <span class="dot"></span>
+      <img id="headerAvatar" class="headerAvatar" src="" alt="avatar">
+      <h2 id="headerName"></h2>
+    </div>
+    <div class="userInfo">
+      <span class="xuBadge" id="xuDisplay">💰 0 xu</span>
+      <button class="logoutBtn" id="logoutBtn">Đăng xuất</button>
+    </div>
+  </header>
+
+  <div id="messages"></div>
+
+  <div id="inputBar">
+    <input type="text" id="msgInput" placeholder="Nhập tin nhắn... (gõ /botnt để chơi nối từ)" maxlength="500" autocomplete="off">
+    <button id="sendBtn">
+      <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
+  </div>
 </div>
 
 <script>
-(function(){
-"use strict";
-
-/* ============== FIREBASE ============== */
-const firebaseConfig = {
-  apiKey: "AIzaSyDwXvlkSjsdsVBPC6PlBJ9ifH_XCk_K1Sc",
+  // ==== FIREBASE CONFIG ====
+  const firebaseConfig = {
+    apiKey: "AIzaSyDwXvlkSjsdsVBPC6PlBJ9ifH_XCk_K1Sc",
     authDomain: "web-chantodi.firebaseapp.com",
     databaseURL: "https://web-chantodi-default-rtdb.asia-southeast1.firebasedatabase.app",
     projectId: "web-chantodi",
@@ -244,696 +262,420 @@ const firebaseConfig = {
     messagingSenderId: "752920225796",
     appId: "1:752920225796:web:66707bc84be2e19294d51",
     measurementId: "G-76PRLRLG0N"
-};
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.database();
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-let currentUser = null;
-const SAVE_KEY = "fishingWorld_save_v1";
+  const usersRef = db.ref('chat_users');
+  const messagesRef = db.ref('chat_messages');
 
-function getLocalState(){
-  try{
-    const raw = localStorage.getItem(SAVE_KEY);
-    if(raw) return JSON.parse(raw);
-  }catch(e){}
-  return { coins:100, playerId: Math.floor(1000+Math.random()*8999), nickname:"", avatar:"👤" };
-}
-let state = getLocalState();
+  const loginScreen = document.getElementById('loginScreen');
+  const chatScreen = document.getElementById('chatScreen');
+  const usernameInput = document.getElementById('username');
+  const passwordInput = document.getElementById('password');
+  const loginBtn = document.getElementById('loginBtn');
+  const registerBtn = document.getElementById('registerBtn');
+  const loginMsg = document.getElementById('loginMsg');
+  const messagesDiv = document.getElementById('messages');
+  const msgInput = document.getElementById('msgInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const xuDisplay = document.getElementById('xuDisplay');
 
-function saveLocalState(){
-  try{ localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }catch(e){}
-  if(currentUser){
-    db.ref('users/'+currentUser.uid+'/gameState').update({
-      coins: state.coins,
-      nickname: state.nickname,
-      avatar: state.avatar,
-      playerId: state.playerId
-    }).catch(()=>{});
-  }
-}
+  let myName = null;
+  let myXu = 0;
+  const LS_KEY = 'chatchung_login';
 
-/* Nhận diện user từ Firebase Auth (dùng chung với hệ thống Chat) */
-auth.onAuthStateChanged(user=>{
-  currentUser = user;
-  if(user){
-    db.ref('users/'+user.uid+'/gameState').once('value').then(snap=>{
-      const gs = snap.val();
-      if(gs){
-        if(typeof gs.coins === 'number') state.coins = gs.coins;
-        if(gs.nickname) state.nickname = gs.nickname;
-        if(gs.avatar) state.avatar = gs.avatar;
-        if(gs.playerId) state.playerId = gs.playerId;
-      }
-    }).catch(()=>{});
-  }
-});
+  // ========== BOT NỐI TỪ ==========
+  // Word list (2-syllable Vietnamese words, filtered from Viet74K)
+  const WORD_LIST = ["chéo áo", "bôi bác", "lồm ngồm", "ăn xôi", "bồ tạt", "chí sĩ", "giở tay", "lột xác", "a hộ", "toàn mĩ", "cam thực", "thiền đường", "rượu chát", "cải ngồng", "tiêu tùng", "nguỵ sứ", "thin thít", "chung thân", "phiên vương", "ấn triện", "cúng sống", "tờ phóng", "dẫn hoả", "cưỡng gian", "tuẫn đạo", "giá vẽ", "mần tưới", "xưởng máy", "sâu róm", "chỉ báo", "vây vo", "phì phò", "dĩ mũi", "lợi thế", "vĩnh quyết", "tổng thu", "chóng chầy", "dao quắm", "tiểu tràng", "xanh mướt", "công thổ", "hộp đen", "luôn tiện", "không dám", "miễn tội", "lồng oản", "mất sức", "thợ cạo", "chư quân", "cải bẹ", "đậu lăng", "nằm ngủ", "bí danh", "kì lân", "ly biệt", "kết tụ", "xốt vang", "sư đoàn", "khoa hoạn", "rút tỉa", "ba giăng", "ụ tàu", "nói mơ", "tiền đề", "cận giáp", "trải qua", "nhưng nhức", "lục địa", "thôi việc", "cảm biến", "tà huy", "thán từ", "thô bạo", "quán ngữ", "trân vị", "thượng quốc", "lưỡi đòng", "han gỉ", "ngắc ngỏm", "nỗi nhà", "cho vay", "ê trệ", "quân ca", "rau ngổ", "chạy tang", "thả mồi", "mẹo mực", "nhóm nhém", "hương học", "cáo tị", "ghi nhớ", "lẩm cẩm", "nguyên tiêu", "chính đáng", "cục tính", "hứa hão", "ai hoài", "lạ lùng", "phù tá", "vực thẳm", "nhà dưới", "gò tóp", "tới tấp", "khách hàng", "kiện nhi", "lữ quán", "đòm đòm", "thương gia", "trúc nhào", "địch hậu", "được mả", "ngạc ngư", "xoắn khuẩn", "bông tiêu", "cuộn tròn", "ngấp ngứng", "thuỳ túc", "mâu thuẫn", "đóng đinh", "hoang tàng", "thảm khốc", "ách tắc", "phành phạch", "quết trầu", "tường hoa", "sung quân", "giải hòa", "gia dụng", "ngậm tăm", "bổ bán", "sơn ca", "bát nháo", "khô khẳng", "hương nhụy", "đoán trước", "xấu dạ", "kỉ lục", "nỡ tâm", "công vụ", "trê trễ", "bủa vây", "ngỏ ý", "ngoại lai", "tử hình", "ông cụ", "rột roạt", "lãi lờ", "đổi ngôi", "biền ngẫu", "sài lang", "pháp sư", "tuần chay", "sán gai", "đoản văn", "gạo giã", "đèn sách", "chú âm", "cá tra", "cá rựa", "lành hanh", "khai khẩn", "bất hủ", "đen nhẻm", "thần tài", "phóng lãng", "rối mắt", "tam suất", "ăn vụng", "chế tạo", "độ kiềm", "phó nhậm", "đèn ngủ", "lại buồng", "đánh bạo", "hoạ hình", "táo tàu", "thân tình", "dao cạo", "tẩu cẩu", "hoạt lực", "chổi cọ", "hứng chí", "hoang đảo", "dự phòng", "gác thượng", "chủ yếu", "tần ngần", "cặp nhiệt", "thường dụng", "cố nhân", "dung hoà", "trại phong", "phân cắt", "méo xoạc", "máy ảnh", "đồn thổi", "tập san", "bức tử", "phương viên", "thớ xoắn", "lợn cỏ", "giao hôn", "đánh mất", "trọng yếu", "thợ nhuộm", "xức dầu", "đại thắng", "kim thượng", "tết ta", "bạc lực", "máy hàn", "cống vật", "nghi kị", "gọt giũa", "khí thế", "rước đèn", "tuyển lựa", "mạt chược", "điện luyện", "sẵn dịp", "cháo bồi", "bậc thang", "yếm khí", "vũ điệu", "van lơn", "đầu hôm", "thiên khai", "học khóa", "công cô", "thiển cận", "giầu cau", "hoàng lan", "tai hại", "bôi nhọ", "dừng bút", "tiếng thổi", "bịp bợm", "yếu lĩnh", "mê ly", "tư trào", "đi hầu", "ngựa ô", "hạ cấp", "ngọc trản", "đánh đắm", "sở nguyện", "cỗi gốc", "giấc bướm", "khó nhằn", "ầm vang", "mòng mọng", "đây đó", "găng tay", "đổ đầy", "khích lệ", "lo lường", "tranh giành", "biên dịch", "giò bì", "húng hắng", "nộp mạng", "hanh hao", "thiên tào", "công hội", "sàm nịnh", "ngoại thành", "sát sao", "diễu binh", "xuân phong", "tiêu điểm", "lổ đổ", "khí công", "vắng tanh", "bội tín", "cỗi xuân", "nữ học", "bênh bè", "quờ quạo", "thếp vàng", "dạy đời", "treo giá", "hữu quan", "tép riu", "tội đồ", "nghênh đón", "vẩn vơ", "dầu đèn", "nhập cảng", "ức đạc", "xe đòn", "chướng khí", "ai bảo", "hoàng gia", "để mà", "bắt nhịp", "hảo vọng", "pháo xì", "một mình", "quí quyến", "đàn sến", "hưởng lạc", "trung vệ", "hồng chuyên", "bạt tử", "thọ giới", "kị sĩ", "thiên thời", "tận thu", "xum xoe", "gương lò", "ngọt sắc", "óng ả", "khổ chiến", "ngủ trưa", "kính chuộng", "rắn phì", "hầm mìn", "cùi dừa", "tăng tả", "ảm đạm", "sức mấy", "cứng đơ", "quay vòng", "ngón nghề", "căng thẳng", "thất thủ", "chiến bào", "lạc chỗ", "chễm chện", "đa truân", "thổ tả", "bầm dập", "lòng dòng", "cao thế", "bảo trì", "sắt góc", "định nghĩa", "độ vĩ", "nhãn tiền", "sơ kết", "bô lô", "lảu bảu", "kinh nghiệm", "trả ân", "y nhiên", "bài mục", "gian hùng", "sinh linh", "đút tỏm", "mến mộ", "án phí", "gấp bội", "má tóp", "thể trọng", "ly khai", "lâu nhâu", "xạc xài", "chỉnh quân", "cười xòa", "sáng loè", "hiệp trợ", "quá lời", "giền gai", "mách qué", "sâu lút", "góc gách", "ruôn ruốt", "dĩ nhiên", "chổng mũi", "nạo vét", "thảm trạng", "khuyên dỗ", "nhuần nhị", "hồi chuyển", "chịu đựng", "thẻ ngà", "gian tà", "mộng sự", "cửa ngỏ", "tiện dụng", "gằm ghè", "hà tằng", "bố ráp", "phôi bào", "ngợp mắt", "nhà cầu", "trối trăng", "thương nghiệp", "đường gãy", "tùy tòng", "bình điện", "dàn bài", "chia cắt", "sò huyết", "thảo trùng", "tay ba", "phẩm hạnh", "phụ duyên", "khổ tâm", "hắc vận", "nông trại", "bày tỏ", "chúng tôi", "nhập nhoè", "trớt nhả", "trách vấn", "lờn vờn", "giấy nhám", "quang cầu", "ngoại tiếp", "mất cắp", "thủy lực", "khảo cứu", "bất bình", "khoe khỏe", "đẩy tạ", "đẫy đà", "thiên thần", "sáng banh", "két bạc", "mặt trái", "sinh ca", "tác quái", "phòng chờ", "bảng vàng", "linh vị", "trối già", "tiêu sọ", "cổng hậu", "giạc chừng", "đốt sống", "đảng đoàn", "chó cảnh", "chó biển", "trữ tình", "tán trợ", "khinh thị", "trái phiếu", "đàn tính", "dái mít", "thượng tướng", "thành tín", "đồng thiếp", "hộ bộ", "ưu sinh", "xưa nay", "rát mặt", "công môn", "thăng bình", "bánh bò", "ngày đản", "xinh gái", "nảy mầm", "kí táng", "buôn ngồi", "cộc cỡn", "ngất ngưởng", "đứa ở", "đại quát", "đặc giá", "ảnh âm", "chọi gà", "trí dục", "bản lai", "tao phùng", "thương binh", "tiệc mặn", "chúng cháu", "đăng cai", "ứng thù", "tam trường", "tử lộ", "dan díu", "mã vạch", "ranh mãnh", "khí lực", "thỉnh nguyện", "tham vấn", "lão nhiêu", "kình ngư", "tổng thống", "lóc cóc", "ca lâu", "dạ dịp", "ngày giờ", "ni tơ", "hanh thông", "dì ghẻ", "đẳng cao", "mách lẻo", "ngứa miệng", "xương chậu", "thám hiểm", "song tiết", "bán lỗ", "tu sửa", "chi bấy", "hoa hoè", "bãi buôi", "tiêu hóa", "điểm sôi", "ân nghĩa", "chột ý", "ngất ngơ", "cơm hẩm", "tươi sống", "giảo hoạt", "khẩu ngữ", "mạch máu", "ra kiểu", "tiếc thay", "đệ tam", "phép cưới", "lèo tèo", "ứng đáp", "tin mừng", "gian hàm", "bách thanh", "cung khuyết", "chuyển khẩu", "mầu mẽ", "rảo bước", "hoạ căn", "mãn ý", "cực tả", "thừa thãi", "cơ khí", "đáng tình", "phổng mũi", "tì tì", "chốc lở", "lút cút", "đánh mùi", "chè đường", "lừa mị", "kết tóc", "đĩa bát", "khơ khớ", "đốm vằn", "huân tướng", "thố tha", "sữa chúa", "tối đa", "cu xanh", "ốp đồng", "qua thì", "bổ dược", "khen cho", "biếng nhắp", "khát máu", "tùng tùng", "chất chứa", "mía đỏ", "nguyên bị", "công bội", "thân phận", "lập cập", "tập huấn", "né tránh", "màng tang", "phải tù", "chành chạnh", "sao lục", "hậu sinh", "ngay đơ", "vây quanh", "cù lệch", "tiểu đội", "hồng ngọc", "thôn dân", "cạnh đáy", "toán đố", "ấm tử", "khung thành", "mái chèo", "đẽo mỏng", "giả điếc", "hoãn xung", "bình dân", "nhiều chân", "phiếm định", "cơ mà", "đay nghiến", "đổ bộ", "nội trị", "cày máy", "nhãn lực", "bánh thánh", "tin tức", "địa cực", "hoà vốn", "rối ruột", "có nhà", "bắc mạ", "cua bể", "võ đường", "bách phần", "phong sắc", "chầm bập", "thượng lương", "hồi ký", "bưu chính", "tuyệt đỉnh", "nhòe nhoẹt", "đông phong", "vun trồng", "thọ mệnh", "cổ quái", "e thay", "thì thụp", "phục hóa", "móng cóc", "ngoài cùng", "tiền cọc", "thầm thĩ", "noãn sào", "nóng ran", "thế mà", "góc phố", "cuồng chân", "dỡ hàng", "nhùng nhằng", "bấu xén", "gạo đồ", "tù đầy", "số thành", "xứ sở", "mái tôn", "lao lung", "lộn cổ", "hoa trà", "tự khắc", "độ đặm", "rởn tóc", "nét ngang", "giải kết", "tuý ông", "cứu nước", "cuồng loạn", "ngạt mũi", "dĩnh ngộ", "sư tổ", "nhà chung", "bánh kem", "lưu tệ", "ghi ý", "phi tiễn", "nhập định", "chấm phần", "chọn lựa", "không tặc", "sáo ngà", "chích thân", "bà đồng", "nằng nặc", "xạ hương", "gạo ré", "sự thể", "niệm kinh", "sức vóc", "thút mút", "cố định", "dạ cỏ", "giải muộn", "bùi nghịt", "tố chất", "đầu máy", "vũ dũng", "đám mờ", "đạo hàm", "cao lanh", "nhận lãnh", "mưu chước", "ai nấy", "ra viện", "thông lưu", "chúng nó", "hưng thịnh", "tính mệnh", "toạ chi", "bão tuyến", "tự cảm", "ngoã lông", "xa lông", "sủng hạnh", "mưu sinh", "vỡ nhẽ", "sơn thủy", "phách trăng", "cáu bẳn", "dát gái", "bai miệng", "sờ sững", "đồng từ", "nội san", "diệc lửa", "chi nhánh", "thi thố", "canh gà", "nói thầm", "thiết bì", "bánh trôi", "ăn độn", "giao đãi", "bố cái", "rách bươm", "thỏ đế", "tổng đội", "biên thùy", "nữ tướng", "nội cảnh", "cùng kì", "tốt lễ", "thiển kiến", "tiểu xảo", "cơ lí", "tôm sư", "vậy ôi", "biến di", "phân đôi", "lộn chồng", "thái công", "đờn cò", "khán phòng", "coi quẻ", "sang cát", "thập cẩm", "dị sản", "con trượt", "du đãng", "đụ mẹ", "cổ bản", "xếp đặt", "phu diễn", "chùn bước", "lu lu", "gạo tẻ", "bực bội", "phục dược", "tiền bối", "đã là", "tàu điện", "cái ghẻ", "giải nguyên", "nhân quyền", "lọ lem", "vạ miệng", "nhật quỳ", "kỵ mã", "phân xưởng", "giun tròn", "thiên thạch", "hoà tan", "năm mới", "khoả lấp", "mảng vui", "hành trang", "thu hoạch", "ỏm tỏi", "thông đá", "hướng lai", "vạch mắt", "máu chó", "hứng chịu", "nhắm chừng", "nhảy bổ", "hút xách", "biểu thuế", "viên mãn", "hình thoi", "trắng bệch", "cầu hồn", "hung đồ", "thẳng thớm", "kì nam", "khuynh diệp", "hám của", "có dễ", "văn giai", "mỏ nhát", "ửng đỏ", "nhuế nhoá", "đổi mới", "bồ ngót", "chả chớt", "tha sinh", "kên kên", "hội chứng", "râu mày", "ngán ngao", "áo quần", "yếu xìu", "bán hớt", "bần sĩ", "chân trời", "đánh lừa", "nhảy bô", "âm khu", "quạ mổ", "gông cùm", "nặng vía", "líu nhíu", "mất lấm", "xuýt nữa", "đại phẫu", "nghèo khổ", "nhất trí", "gian xảo", "cầm tinh", "nghịch đảng", "dưa giá", "gọng kìm", "điều độ", "làm giàu", "thi thánh", "lưu diễn", "khai diễn", "kỳ thị", "đau thương", "dương lịch", "ghế đẳng", "thành thử", "lược sưa", "hoài nhân", "nghiệp đoàn", "liên luỵ", "am hiểu", "ô rút", "xờm xờm", "thở hắt", "lỏm ngỏm", "dùi mài", "xẩn vẩn", "cận lân", "đầu lọc", "đột phát", "dũ sang", "thai dựng", "cấp tính", "giấu màu", "phừng phừng", "dị chủng", "sơn sống", "chẩn đoán", "vọp bẻ", "quang dầu", "tiết điệu", "hoa bia", "tai quái", "huyết bài", "thất ước", "tiền đồn", "giấc xuân", "chót bót", "huyệt mộ", "rén chiềng", "cun củn", "xếp đống", "ứa giọt", "gần gận", "kinh hoàng", "thư phòng", "cá úc", "dở miệng", "đưa đám", "tối đại", "nháo nhác", "trượng phu", "reo réo", "tịt ngòi", "cột điện", "nhã thú", "chằm bẳm", "trả lời", "nhà ngươi", "cam quýt", "phân tươi", "tòng đảng", "ẩn khuất", "chiêm đá", "cười gượng", "dê diếu", "heo heo", "định vị", "trung sinh", "hàm nghĩa", "lệnh nghiêm", "một chốc", "sắt điện", "thơ thốt", "gián phân", "rục rịch", "lũy thừa", "thanh phong", "tri thù", "cường điệu", "tên thuỵ", "mực nho", "tổ hợp", "chung cư", "chán quá", "dấu ngã", "hạ đẳng", "điện tín", "khoai khoái", "sạo sục", "hậu phát", "nhởn nhơ", "đại doanh", "giấu tên", "nuốt tươi", "điểm xuyết", "vi nấm", "hiệp ước", "kém mắt", "tự viện", "quần manh", "cũn cỡn", "giao hoan", "giảng thuật", "dị bang", "bùng bục", "văn đàn", "tộc người", "khai trí", "nghịch tặc", "liều liệu", "treo niêu", "hạt giống", "thấp kế", "axit nitric", "ngày tiết", "đưa ma", "nội nhũ", "hàm tiếu", "phân dị", "nghề nghiệp", "trinh tiết", "xông xổng", "chửi lộn", "thọc léc", "a ha", "mã vĩ", "bí truyền", "sò đá", "bờ tường", "mĩ kim", "ốc bươu", "thống kê", "cửa bể", "dưa cải", "xèo xèo", "cơ thang", "hâm hâm", "càn quấy", "chánh trương", "nghe nhìn", "mất chi", "huyền cơ", "mòn mỏi", "tinh dịch", "phân phát", "dúi dụi", "nhon nhón", "nhồi nhét", "ngân tuyến", "hoa thương", "minh chủ", "nín lặng", "cầu kiều", "tiền tiêu", "rầu lòng", "ra màu", "gà tiền", "vền vên", "tứ sắc", "suy tổn", "thuế đinh", "tác hại", "bỏ lửng", "tông tốc", "bọt bèo", "a tòng", "ứng khẩu", "êm êm", "thái hư", "hoài huỷ", "hình dáng", "quí vị", "khinh binh", "lỗm bỗm", "chân gỗ", "tiệm tiến", "tưng hửng", "tơ lụa", "cản ngại", "đắc lợi", "chây lười", "giá bán", "trễ biếng", "ối chà", "cây đèn", "tuyệt chiêu", "hình dong", "chăm lo", "đề xuất", "tương truyền", "ùn ùn", "hồng quần", "lùn tè", "hoán vị", "xử án", "hoa viên", "môn phiệt", "tịch diệt", "ám chỉ", "lồi lõm", "pháp quy", "siêu thọ", "rúm ró", "thầy ký", "reng reng", "cùng ra", "bát giới", "dúng tay", "phẩm tước", "đáng tin", "tri tri", "nuôi cấy", "dã ca", "ngoắt ngoéo", "giong buồm", "ẩn thân", "ỉa tháo", "xưng đế", "giống hệt", "tạc đạn", "lương thiện", "nhục mạ", "phản ứng", "câu lưu", "mét hệ", "bi tráng", "nội khoá", "nhầu nát", "dấu hỏi", "cảm hứng", "kênh mặt", "tuyến lệ", "lẻn lút", "lững chững", "phúc âm", "kịch cọt", "xưa kia", "lễ cưới", "một lần", "canh thiếp", "tị trần", "mõm chó", "sữa đặc", "bà gia", "dạn dày", "a posteriori", "bất bằng", "nghị luận", "hùm sói", "mặt nhẫn", "than nâu", "chữa chạy", "lăm le", "xa mu", "mục đồng", "chỉ thiên", "tái giảng", "ăn ghém", "góc ló", "vành tai", "hướng nghiệp", "kính tặng", "di tích", "nội sinh", "đại phong", "chớ bộ", "nhanh nhảu", "cua đồng", "trơ trụi", "bạo phổi", "ích điểu", "phát ngôn", "quan toà", "tam tạng", "đầu thai", "chim chóc", "quái đản", "lèn lẹt", "bợp tai", "đề tựa", "quây tụ", "phụ khuyết", "kị binh", "tam cấp", "ngậm ngùi", "túc trực", "thuyên chuyển", "diệu kì", "điếm nguyệt", "lơn lớn", "kẻ cắp", "hời hợi", "xiêm áo", "can trường", "bát ngô", "xè xè", "lầm lì", "nưng niu", "định đoạt", "nhảy dài", "tê tái", "tán thành", "dị hướng", "trinh bạch", "hèn kém", "sì sụp", "trúng quả", "triệu tập", "ám hiệu", "rảnh nợ", "nhạc công", "ngẫu hợp", "có vú", "khít rịt", "lả lướt", "lính cơ", "cảm thán", "cài đặt", "thục tội", "bánh phồng", "chí nhân", "đau đẻ", "vắng teo", "bàn giấy", "án thư", "căng tin", "bã rượu", "nước lạnh", "con toán", "tư tưởng", "tạp hoá", "tuyên án", "thánh thất", "diễn tấu", "định ngạch", "bành bạch", "phóng uế", "phản quốc", "nan trị", "sang hèn", "khoan dung", "vướng vít", "đẩy lùi", "nhụng nhịu", "ép giá", "ruổi giong", "chò chỉ", "rách rưới", "xuất lực", "tùm tũm", "cửa chiền", "kỳ hào", "ra hồn", "chèo nà", "loang loáng", "tiêu dao", "ác quỷ", "mắm nêm", "nhất tề", "vòng đua", "bình bút", "sát nách", "báo vụ", "đánh môi", "vóc hạ", "nói gì", "đức độ", "trăng non", "sao biển", "đầu bảng", "rốt cuộc", "biên độ", "cà rá", "rạch ròi", "lao tâm", "luộm thuộm", "sáng loà", "ngưu đậu", "ngổ trâu", "chỉ điểm", "anh đào", "quá nhiệt", "ăn trầu", "cung long", "nghĩa rộng", "si mê", "chủ kiến", "tự khiêm", "tím bầm", "lầm lụi", "nói mê", "từ quan", "thuỳ liễu", "cuốc chim", "tiện nghi", "tốt bổng", "va vấp", "hốc mắt", "yết bảng", "hiếu kính", "bồ nhí", "cường dương", "điều áp", "ỷ eo", "chữa thuổc", "khác cực", "dâu con", "xác thực", "chéo khoeo", "đồng căn", "hành doanh", "ngủn ngoẳn", "khéo là", "đèn khuya", "lót tay", "chẳng qua", "nguyên do", "phong nguyệt", "tủ gương", "tỷ dụ", "quần bò", "nết na", "đăng tiêu", "trần luỵ", "lộ đồ", "lao vụ", "mang nợ", "bên bờ", "bồn tắm", "bờ mỏ", "hương đảng", "con hầu", "khó nghĩ", "phong hội", "cùng quẫn", "cá nhét", "biển hồ", "lung lay", "bỏ vắng", "giải thoát", "nen nét", "tặng phong", "đa cùng", "chết non", "thượng huyền", "đôi tám", "bên dưới", "in ảnh", "mùi hôi", "phôi pha", "chân voi", "lý thú", "bèo tấm", "doanh điền", "thường tân", "tiếng là", "bổ nghĩa", "khí hậu", "hoàn tễ", "xéo xẹo", "thở phào", "khuấy đảo", "miệt mài", "chau mày", "dịch văn", "thờ cúng", "phát bệnh", "hội buôn", "gương sáng", "đỏ mặt", "sàn gác", "thích khách", "rậm rịch", "ngôi báu", "ngay thật", "tàn quân", "ngàu ngàu", "kẽ răng", "xép xẹp", "đáp từ", "độn thuỷ", "dua nịnh", "nhân huynh", "đâm hông", "bàn mổ", "cuồng điên", "mụn con", "thế lực", "hòm kính", "dạ trần", "loạn thần", "ba lá", "gian tặc", "già tom", "đặt đít", "bày đặt", "tái bút", "củi quế", "xuất sắc", "vi kế", "bánh bỏng", "cửa rừng", "tề gia", "xúc giác", "bách tán", "nồng hậu", "thuật giải", "nhằng nhẵng", "mía de", "bánh nhãn", "trôn ốc", "gớm mặt", "dưa hồng", "hạt dẻ", "khuy móc", "bỏ xừ", "biểu hiện", "máy giũa", "hải đăng", "ca củm", "ngọc đường", "căng xác", "ngoại kiều", "gia thần", "ấn tượng", "tu mi", "tật bệnh", "ngàn năm", "phay phảy", "toàn quốc", "bao chừ", "về già", "gai mèo", "khám xét", "khêu gan", "đối sánh", "ngồi tót", "tiền túi", "non yểu", "truy hoàn", "không chiến", "chết sớm", "đương quyền", "sáng chói", "cái đã", "lòi xỉ", "triệu triệu", "khít khịt", "cơ tự", "can cứu", "quan tòa", "huệ cố", "muôn năm", "ngờm ngợp", "địa nhiệt", "bá vương", "thùy mị", "ấn tống", "bán rong", "gây lộn", "quản voi", "chuyển biên", "già khọm", "thầy kí", "giả danh", "cha nuôi", "cảm thông", "thi tuyển", "hữu thần", "mần ăn", "trẩu núi", "béo ú", "bưu phẩm", "hãng buôn", "ăn bám", "trực tuyến", "pháo hiệu", "đái đầm", "bánh bẻ", "nếu thế", "thuỷ thần", "đá trời", "tư duy", "đại dương", "cao học", "doanh nghiệp", "bước qua", "gom góp", "nhất lãm", "chừng mực", "lễ tân", "cáo già", "khuấy rối", "sống sót", "ăn quịt", "sư sãi", "nhắm mắt", "hà cớ", "gốc ngọn", "củ khoai", "mái nhì", "phụ chú", "thũng thịu", "kim ngạch", "đon đản", "tréo cựa", "tầu bay", "chữ con", "cảnh giác", "lì xì", "ba giỏi", "bu mày", "khoa đại", "xuất xử", "nhớ ơn", "khao binh", "thầy tu", "ki bo", "âm binh", "rầm rì", "địa lôi", "làm quen", "phút chốc", "noãn hoàng", "tỳ vị", "bay bướm", "phồn tạp", "cảm phục", "gái già", "thoả nguyện", "nhảy dù", "cõi tiên", "úng lụt", "in sao", "màu da", "nhát gừng", "tất niên", "thân thân", "chuối lùn", "xe điếu", "thả cửa", "má hồng", "căm uất", "kiệt cùng", "vắt nóc", "hầm rập", "giám mã", "phong kí", "dừng bước", "cơn sốt", "nhẵn thín", "cởi trần", "giãn xương", "tức là", "cử nhân", "đại chiến", "không tập", "đi rừng", "đinh ốc", "cà kheo", "rối rắm", "chòm nhom", "chạy buột", "trúc sênh", "mất mùa", "ra ơn", "hợp duyên", "thủ công", "thuyền rồng", "di sản", "thuyết phục", "giảng giải", "chân như", "phân luồng", "cặp thai", "xí đồ", "trứng nhện", "béo mập", "thước thợ", "chạy rông", "hăng máu", "chả đùm", "luấn quấn", "vào đám", "thương số", "bàn trang", "lĩnh binh", "đại lãn", "ghé mắt", "thợ khóa", "chén tống", "can án", "men huyền", "bừa ghim", "trợ tim", "treo gương", "leo lét", "ngày đường", "truyền tải", "vòng vo", "ghế tréo", "lênh láng", "thực thi", "máu lạnh", "vị nghĩa", "bạch định", "li giáo", "gà phi", "nức danh", "phòng hỏa", "bông lông", "khệnh khạng", "phát hoả", "râu ria", "nữ trầm", "bản đồ", "đễnh đoãng", "bụng nhụng", "gần bên", "bọ hung", "cứng còng", "nhàn hạ", "bù khú", "lở láy", "tả biên", "hữu hiệu", "cơm độn", "dâu da", "ăn hiếp", "ổ khóa", "dăm bảy", "ngữ khí", "bớt mồm", "xo ro", "trông vào", "bôn hành", "tiêu cự", "cúng cáo", "thiên lệch", "vàng hoa", "đồng bàn", "pemanganat kali", "chụp điện", "rao giảng", "hãy còn", "nhà trong", "dịch lộ", "mẫu thức", "tinh tế", "tưởng bở", "chẵn lẻ", "tục lụy", "tức cảnh", "củ hành", "phiêu lãng", "âm ba", "bỏ ăn", "ác nghịch", "đỏ khè", "kinh sư", "giỏi quánh", "hư đời", "thuyền thoi", "cứt gián", "mục đích", "hồi dương", "ái nhiễm", "độ ẩm", "bọn mình", "tằm tằm", "ễnh ruột", "hay không", "đau thắt", "trừ khử", "bùa gió", "quấy rối", "xơ rơ", "tổng tài", "kêu nài", "xô bồ", "dài ngoẵng", "đa tạ", "rau cháo", "bỏ quên", "gầy rộc", "số phận", "áo nhộng", "đành rằng", "rồi thì", "quyền mưu", "cực đểm", "quắt queo", "chặn đường", "mụn ghẻ", "viễn đại", "nhân thế", "thầy thông", "xích thằng", "kịch hóa", "báo an", "yếu lược", "minh mẫn", "thòng lòng", "nốt sần", "diễn viên", "gầy nhom", "hoàn doanh", "nhà xưởng", "xử bắn", "trợ quản", "thành luỹ", "niên khoá", "hành khách", "da thịt", "hàng tỉnh", "đến đỗi", "bíp tết", "lăn chiêng", "tề điệp", "đau quặn", "a ngu", "ưa nhìn", "húng lìu", "cung nga", "gày gò", "xái nhì", "tứ khoái", "hưởng dụng", "cơ hồ", "mảnh khảnh", "chưởng vệ", "đến thì", "giảng dụ", "đằng ngà", "trêu chòng", "tiêm tế", "tốc lực", "can đảm", "xúc phạm", "mỹ quan", "truyền đơn", "co dúm", "chống đông", "tấn phong", "ăn đút", "hải tảo", "nhớ nước", "đầu nậu", "chúng ông", "hôn mê", "văng mạng", "đền nghì", "giáng trật", "măm mún", "cụ bà", "niết đài", "hồi môn", "điện năng", "bánh tiêu", "bội chỉnh", "khoái cảm", "lưu tốc", "hành dịch", "bền bỉ", "bộ tộc", "tăng trưởng", "đồi trụy", "phập phù", "đói ăn", "ghe lườn", "khuyết cách", "phây phây", "nhổ bão", "nguyệt kị", "xuất khẩu", "kiếm cớ", "bách ứng", "hăng hắc", "chanh cốm", "chữ kí", "nương tay", "thầy lang", "trập ô", "truyền kỳ", "sang ngang", "đương triều", "đánh đùng", "bài vở", "tán thưởng", "tà thần", "dâm dục", "hi sinh", "thi xã", "ba đào", "ranh khôn", "cao đạo", "oải hương", "bừng tỉnh", "phá tán", "ngoằn nghèo", "thiên truỵ", "đại tiện", "nghịch thần", "võ vẽ", "thườn thượt", "kị nắng", "thảm thê", "lương hướng", "chủ công", "quy phạm", "oi nước", "biên niên", "mắc phải", "hoàn thành", "thành toán", "thú dữ", "điệp từ", "gia trọng", "liên liến", "thưỡn mặt", "mê cung", "chuyên tâm", "tùm hum", "cắm sừng", "ái phi", "nhảy múa", "tinh thành", "vô tội", "đau mạch", "giỏi giang", "thông qua", "túi tham", "dẽ dàng", "dã cầm", "vọc vạch", "mềm nhẽo", "trung sách", "bán chịu", "ti phiên", "nước dãi", "đen đủi", "đồi bại", "thơm lựng", "choá loà", "cáo lỗi", "bàn chân", "khỏa lấp", "khơi thông", "sàn sàn", "đèn điện", "thìa là", "cất đám", "nghiêm sư", "trùng lặp", "công sở", "cực bắc", "con đầu", "khán hộ", "mất công", "châu lệ", "kíu kíu", "què quặt", "trả bài", "hạo hực", "không bào", "lơ láo", "gạt phắt", "gây án", "mấy mươi", "nhặng bộ", "ỉa đái", "chưng hửng", "ti tầng", "huyễn tưởng", "khẩu pháo", "cao thâm", "ích lợi", "sứt mũi", "tiết tố", "xà cạp", "trệ thai", "động binh", "bẹ mèo", "hiểm yếu", "thương tích", "dài dại", "dây bọc", "tổ phụ", "âm bội", "khuê môn", "quá đỗi", "ngậm nước", "thấp tho", "quạnh vắng", "dấm dúi", "sâu đo", "đủ mặt", "hàng xáo", "thi ân", "tầm ma", "thiên chúa", "cứu viện", "thầy mẹ", "binh đoàn", "dở ẹt", "cầu bến", "liễu rủ", "giở mình", "bơi ngửa", "cuồng chiến", "từ ngày", "khoe của", "đối ngạn", "chiếu thư", "dây loan", "tia gamma", "bạch trọc", "đào ngũ", "giáo dục", "xe lọ", "giá rét", "dâm thư", "chất khí", "từng bực", "gạch chỉ", "sáo sậu", "khâu vá", "tan nát", "xử thế", "mắt hột", "gấp đôi", "cao địa", "gia phong", "giảng đạo", "ứng động", "nội cung", "thành phục", "phục thiện", "cho đang", "khàn khàn", "thập thò", "trượt giá", "khô cổ", "giới chức", "chớm nở", "thân thương", "bắt bẻ", "phòng mổ", "quang âm", "trúng thầu", "ngỡ ngàng", "áo cưới", "xiên xiên", "làm trò", "ả phiện", "tướng lĩnh", "kim khí", "khinh khi", "loằng nhoằng", "nghị trình", "băng rung", "loằng ngoằng", "hạ cố", "đại đao", "về hưu", "nghinh phong", "đánh số", "buộc chân", "ngập lụt", "choàm ngoạp", "căm giận", "đùng đục", "tình tự", "diễn tiến", "quản hạt", "bậc thầy", "nội hoạn", "lấc láo", "sao chụp", "dung quang", "thế đồ", "xuân đình", "quậy phá", "phân thế", "tiễn thu", "lộng ngữ", "măng rô", "trái chứng", "thể nào", "chuẩn tắc", "gian khó", "nhỡ tàu", "năng học", "tiếp tế", "ví dặm", "nội điện", "úng thuỷ", "suýt soát", "hạ âm", "men mét", "béo ngậy", "chắp chảnh", "thầm lén", "thợ may", "chiều chiều", "ăn xổi", "hang hùm", "bằng vai", "bác cổ", "lãng xẹt", "lụp bụp", "lạc đường", "nhún mình", "man khai", "vị kỉ", "cà gai", "tan tành", "lông nhung", "phạch phạch", "hiền huynh", "tranh dầu", "ngồi tù", "lụng bụng", "phân viện", "bảo tàng", "cứu bệnh", "thừa quản", "thuyền chài", "xin phép", "đi củi", "tự vựng", "qui ước", "bỗng đâu", "xúc tiếp", "bắc tê", "ảnh kế", "cận kề", "thiên đàng", "bồng tang", "ngay lành", "rắn câng", "trắc nghiệm", "quái thai", "đinh ba", "tám mươi", "góc trong", "nhà may", "nhẹ miệng", "đại phúc", "e nữa", "biểu tấu", "nhập lý", "tiếp hợp", "dàn ý", "rù rì", "cầm khách", "tục truyền", "nước đái", "minh ngọc", "nghiệt ngã", "khật khừ", "êm ắng", "thất thân", "rút tiền", "cao ngạo", "nội giám", "bảo sinh", "tiểu tuyết", "đẳng trương", "ngữ cảnh", "dây duyên", "trống lổng", "mon men", "đồng đanh", "biện bạch", "che chắn", "nhớt kế", "hàng văn", "hòm lạnh", "giữ miệng", "sưng phổi", "tôi người", "dệt cửi", "cù cưa", "nói trại", "xô viết", "trúng phóc", "nằm mơ", "cong cóc", "ngũ phẩm", "đầu ngắm", "thịnh danh", "chiếm nhận", "quân điền", "gièm pha", "chiều nay", "bán chạy", "đắc nghĩa", "trọng lượng", "thỉnh mệnh", "gặm mòn", "ván thuyền", "bòn rút", "công nợ", "mượn mõ", "phiếm giao", "phản thùng", "phù phụt", "phẩm chất", "mộng mơ", "riu riu", "ôn ổn", "củ sát", "có sạn", "dè dặt", "võ biền", "bài ngà", "càng cạc", "tạm la", "nơi nới", "nấc cụt", "móng vuốt", "pháp thuộc", "duy linh", "thái tổ", "phiên trấn", "sơn thuỷ", "êm lòng", "côi tột", "thiên đường", "thổi ngạt", "dạn roi", "nhức xương", "xung khắc", "áo len", "bỉ mặt", "cải nguyên", "đánh thuế", "chuyển mã", "du thuyền", "tâng bốc", "miễn xá", "nô thần", "tay chơi", "phẩm vật", "hải sâm", "đồm độp", "chết mệt", "đình chiến", "hư văn", "lọ nghẹ", "thực chất", "tóm tém", "chọc nách", "giai cấp", "trưởng tràng", "đồ biểu", "gươm đao", "thị vệ", "thử sức", "khuyên nhủ", "thất thất", "có công", "thút gút", "đường quai", "sục sạo", "nghiêm cẩn", "tàu ô", "dấu luyến", "gạo dự", "bầu hâm", "nghĩa dũng", "thường phạm", "thụ lí", "biến tướng", "động kinh", "điền kinh", "giảm tức", "suy rộng", "độc ẩm", "nắp ấm", "nín thít", "dị trị", "liễu bồ", "quặp râu", "mánh lới", "cung răng", "sân sướng", "ui ui", "thua bạc", "bỗng nhiên", "khúc xạ", "ở trần", "dự ước", "đá vôi", "lộp bộp", "nặng nề", "khéo mồm", "thứ tự", "ghế gập", "giở trời", "thủ phận", "oai oái", "tự nhiên", "thằng cha", "thiên can", "cánh môi", "hạng nhất", "lốp tốp", "ngứa tiết", "đánh đống", "xương hoá", "dân quyền", "nghị gật", "tủ tường", "nước thải", "phản thần", "hè hụi", "giống in", "bìu dái", "đơn người", "củi đuốc", "châm chước", "bán dạo", "lơ hồng", "ăn ở", "hiểm họa", "đại hình", "nối gót", "chiều rộng", "điêu toa", "trợ sản", "biến dạng", "yên lòng", "âm điệu", "đớ họng", "cơ bần", "cắm chốt", "thu dọn", "quy củ", "phó ti", "thối hoăng", "éc éc", "siêu tốc", "thối hoắc", "mề đay", "bàn cuốc", "dịch mã", "chuyển tải", "toạ độ", "tăng giảm", "bữa tê", "tản cư", "huyện trưởng", "có chửa", "trái nghĩa", "đổ xô", "đẳng áp", "hương giới", "dê cụ", "chấp chiếu", "chào hàng", "bực tức", "mẹ kiếp", "chết người", "nói suông", "tía lia", "thắc mắc", "nông thôn", "lâm chung", "học trò", "dã đề", "hoang báo", "phờ phạc", "thập trưởng", "địch họa", "te vàng", "lâu năm", "xệch xạc", "cội rễ", "sống thừa", "lưỡng lự", "nói rước", "đá bảng", "thu nạp", "chân thân", "á phiện", "mưu trí", "lộm cộm", "mậu dịch", "tuỳ viên", "vỗ béo", "suy kém", "đổi đời", "tinh dầu", "hoá trị", "ác điểu", "từ đó", "xỏ ngọt", "kim băng", "bắt chợp", "cường quốc", "trí tử", "vô định", "chánh hội", "bản in", "người thượng", "màu dầu", "êm giấc", "dư thừa", "chóc ngóc", "bụi bặm", "nín khe", "hoà hiệp", "đồng tông", "tỏ vẻ", "bội số", "hiếu hoà", "túi dết", "tấc vàng", "lắm chuyện", "ghế bành", "ăn tiệc", "bất trị", "miếu hiệu", "vật vã", "về vườn", "cắm nhà", "cứng nhẳng", "xá cày", "phân hệ", "dặt dè", "chiếu rượu", "sắt thép", "nhựt trình", "tuy nhiên", "lấp xấp", "mại dâm", "cước vận", "bòn nhặt", "u minh", "năng khiếu", "bóng vía", "tồn qũy", "săảm lốp", "đệm mút", "tình địch", "bóng bì", "tuần san", "kiêu binh", "phiên toà", "khoảnh độc", "hoa cà", "réo nợ", "bán chác", "chết giả", "thôn dã", "hát văn", "nói riêng", "miền xuôi", "có nghĩa", "đền bồi", "thương vụ", "tướng quân", "thua trụi", "hán thư", "lải nhải", "chứ lại", "sẽê hay", "thú nhận", "thiếu vắng", "cập đệ", "bạo động", "ve vẩy", "phát dẫn", "khật khưỡng", "còm cõm", "thành hội", "hồng lô", "ộc gạch", "chuyển thể", "bận chân", "tu tạo", "hậu sản", "vi tính", "mẫu hậu", "tiền cò", "lùn lùn", "cham chảm", "án ngồi", "hiệu lực", "nước ròng", "đường phèn", "kỵ khí", "cá cóc", "sợi đèn", "thất gia", "khắm lặm", "dã hạc", "thất kinh", "đãng trí", "việt hóa", "hồ cầm", "khoang cổ", "không đổi", "ông phệnh", "cầm đài", "thừa cơ", "lại giống", "xơi xơi", "làm đỏm", "lao khổ", "hoa man", "cuồng chứng", "thước đo", "cá leo", "ban vàng", "tiêu mòn", "kim chi", "khó nghèo", "cay chua", "y lệnh", "phân giác", "danh giá", "quý quyến", "thượng đẳng", "bóng tà", "treo giò", "báo bờm", "ba gạc", "bao dung", "hữu bang", "thần hạ", "cứu tế", "trầm tĩnh", "bắc cực", "kinh hoảng", "chất nổ", "định phân", "du mục", "nhị đực", "xa trần", "bưu thiếp", "hoa hiên", "trung vị", "bằng được", "trung sĩ", "dị sắc", "hoả tinh", "lớn tớn", "cử toạ", "bánh quế", "kèo nèo", "bột sam", "hiện nay", "cò hương", "ĩnh bụng", "mơ mẩn", "ra mắt", "cua thịt", "nén cà", "rò rỉ", "quang hóa", "cơ ngũ", "ró ráy", "văn bút", "đang in", "thăm dò", "đồng bối", "giải thuyết", "sĩ lâm", "giao tranh", "không thể", "khớp răng", "lưu bút", "vung văng", "đốt đèn", "linh xa", "ngông nghênh", "nói xấu", "sẽ hay", "tăng cường", "nói lắp", "ngân khoản", "cạnh khế", "nghênh tống", "no lòng", "từ đấy", "lâm li", "dạng thức", "đi tắt", "lật ngược", "bán xác", "người già", "cháu ruột", "tân lang", "ngục hình", "âm tạp", "yên thân", "thần tình", "độc điệu", "chuyển tiếp", "máu xương", "chim thước", "nhân tâm", "mây ti", "bời lời", "buồn nôn", "tiểu tường", "kèn hiệu", "yên ả", "đầu nước", "khô cứng", "cơm lam", "não nùng", "con con", "đành vậy", "xách nách", "cả tiếng", "trần đời", "dặc dặc", "chống chèo", "thống lãnh", "đáng thưởng", "e tình", "vô ước", "tri khách", "đừng hòng", "lỗ rốn", "máy kéo", "tâm thư", "lêu lổng", "chợp chờn", "cầm lỏng", "cầm thú", "nguyên dạng", "cồng chiêng", "phiến quân", "sư trưởng", "bủng bớt", "vô dưỡng", "gẫy gọn", "nguyệt lão", "lý tài", "chất ngất", "chủ quán", "tồ tồ", "mơn man", "triều lưu", "ngúc ngắc", "nuốt hờn", "tức cười", "bản quốc", "thụt giữ", "đâm liều", "tai voi", "đất hứa", "khói lửa", "gác núi", "chớt chát", "dịch lí", "tây dương", "ren rén", "coi sóc", "xoay quanh", "giao bái", "theo bổi", "bãi nhiệm", "bóp mắt", "nhóm trưởng", "râm bụt", "nín bặt", "ngụ tình", "bình giá", "ăn thua", "đánh võ", "vĩ đại", "giây phút", "khí khái", "dòng dòng", "chớ đừng", "thất học", "câu kéo", "thoải thoải", "quán ăn", "ếch nhái", "cung thương", "khinh miệt", "phong thuỷ", "hạn chế", "bấu véo", "gia nghiêm", "trạm xá", "rập rềnh", "bóng ném", "tiểu bang", "hoạ tiết", "hương bạ", "đầu lòng", "nguầy nguậy", "đường sắt", "thực là", "chú mục", "lang sói", "nhuần miệng", "cải cúc", "chấy rận", "thuốc ngủ", "keo loan", "quen mặt", "dầu thắp", "hoà tấu", "tôn nữ", "than sàng", "chiều qua", "án lệnh", "cần vương", "nhập vai", "hỗn hống", "lộp chộp", "tàu hỏa", "khí mỏ", "xuyên sơn", "kinh bổn", "cười ruồi", "khuynh thành", "khung chậu", "giáng cấp", "lấm láp", "rửa tiền", "lợi quyền", "sống nhăn", "sa đì", "ngon miệng", "quen quen", "thiếu phó", "đệ nhất", "phụ ơn", "ngờ ngợ", "trầu không", "kìm chín", "bọ trĩ", "sơn trại", "dìu dắt", "no ấm", "ác ôn", "líp chíp", "chêu nghêu", "hoài thai", "phục cổ", "sinh thú", "thiên cầm", "bán đảo", "ăn sáng", "găm giữ", "rận gà", "phê duyệt", "tư sản", "ngang bướng", "duyên hải", "ướt mèm", "tài xế", "bái biệt", "gượng ép", "chông mác", "chua lét", "già đòn", "ra bài", "lọc lõi", "đỗ ván", "thảo nào", "đầy khê", "rừng nhám", "volt kế", "thứ đẳng", "nhầy nhậy", "thuốc tê", "phải bã", "xu thế", "thiểu nhiệt", "sằng sặc", "quí khách", "nhãng quên", "cần trục", "nghinh đón", "quốc trạng", "bát hương", "khai toán", "bẫy sập", "quỉ thuật", "giảm áp", "xiết bao", "độ thân", "làng chơi", "vọng cổ", "kết hạch", "muôn dân", "nhân chủng", "vận mạch", "báo bổ", "buộc néo", "thạch bàn", "hắt hiu", "ép xác", "tuyết cừu", "tú ụ", "cứng mình", "chiêu thức", "vướng mức", "để mắt", "tôi con", "kim cương", "tác nghiệp", "keo cú", "ao ước", "cùng tính", "bòn hòn", "đồ án", "đèn bàn", "tấm phản", "chém bặp", "cô đồng", "phạn ngữ", "thu ba", "sản sinh", "đằng thằng", "xong chuyện", "lả lơi", "bóng bẩy", "vân du", "bầu bí", "bén tiếng", "dấu lửng", "giầy dép", "im bặt", "vật mang", "công suất", "kỳ khôi", "ngoai ngoái", "hội trưởng", "sẽ biết", "thế chiến", "đi tới", "cháu nhà", "xuống đường", "nói chữ", "tất toán", "nhoẻn cười", "áy náy", "hơi hớm", "lắc lê", "nhân suất", "đườn đưỡn", "giá buốt", "ứng mộng", "dưỡng sinh", "tổng đoàn", "sức mạnh", "mình mẩy", "gian dối", "đấu kiếm", "ngửa nghiêng", "tống cổ", "ngoan ngạnh", "nỗ lực", "mẹ con", "nợ đời", "đánh máy", "khuê li", "bán mình", "cò cưa", "đấu thầu", "phân bổ", "đứng đắn", "phô bày", "nói lịu", "oán thù", "rúc đầu", "đổ đống", "toàn quyền", "đại lũy", "quánh quánh", "con đò", "đua tài", "huyết quản", "oằn oài", "xớt xợt", "hàng phục", "giáo đường", "đội tuyển", "cơ hoang", "kì giông", "xốc xáo", "dịch vụ", "lục lọi", "thú quê", "xích vệ", "chăn cù", "mường tượng", "chiều hôm", "danh gia", "nay kính", "mài nhọn", "tổng trưởng", "báo cáo", "ụ đảo", "cự tộc", "chiếu cố", "bạc đồng", "sơ cứu", "ngoại tỷ", "nguội lòng", "bông bèo", "đá hất", "độn vai", "ngạo nghễ", "biết ý", "mấy hột", "tờ trình", "quanh queo", "vỏ dà", "biểu lộ", "lố lăng", "nghệ thuật", "ăn lận", "trung bộ", "buộc lòng", "cao nghều", "gai gai", "truy phong", "thời luận", "sập sình", "sinh sự", "ngảnh đi", "ngõ hẻm", "hành não", "thân mến", "bạch chủng", "phưng phức", "ngày sau", "đậu phụng", "bạch lộ", "chưởng lí", "phì cười", "dấu câu", "hồn bạch", "thế là", "cuộc họp", "rồng rắn", "chờ mong", "làm mắm", "thia thia", "sánh tày", "iu ỉu", "ngây ngô", "kì thuỷ", "pháo thuyền", "bút son", "mắt nhoèn", "đánh bài", "địa bạ", "chừa bỏ", "đản bạch", "khi ấy", "trung trị", "vũ sĩ", "tế nhuyễn", "giảm phức", "lừa phỉnh", "bộ hành", "hạ thần", "mỏ bao", "khinh khí", "đoàn phó", "cá chày", "phế bỏ", "quá chén", "hoàn toàn", "ngoe ngoảy", "thông đồng", "gót sen", "dao bào", "doanh sinh", "mang râu", "hãm hại", "dị dưỡng", "đồng niên", "đại bái", "nứt rạn", "tỉa gọt", "hoà đàm", "sứt sẹo", "ôm ấp", "dao phay", "pháp lệnh", "thầy đờn", "hội hè", "dẫn nhiệt", "cầu toàn", "trọng vọng", "chúng con", "cánh màng", "ngất nghểu", "bùng nổ", "lưu lạc", "bóng dương", "bánh gai", "để ngỏ", "dung tha", "công toi", "đẻ mẹ", "vóc dáng", "cánh trả", "đa thai", "giáo hóa", "lẫm cẫm", "sui gia", "bún bò", "công tích", "chuyển giọng", "giọng nói", "dính líu", "danh tiết", "cá heo", "cạp quần", "hách dịch", "cắm sào", "phù du", "đèn cù", "đinh khuy", "hồi cư", "bề tôi", "gày gùa", "rít răng", "nguyệt điện", "lười thười", "sơ tán", "cực phẩm", "giao thông", "chiêm ngưỡng", "vái dài", "lọt đọt", "học lỏm", "phi trường", "huấn học", "lo tính", "thùng tưới", "thiên định", "nghề ngỗng", "phải chăng", "quán thế", "cập thời", "đổ lại", "mơ ngủ", "nói không", "hoa sao", "cắn chỉ", "câng cấc", "tư doanh", "tiềm nhập", "khấp khởi", "thung huyên", "đỏ lựng", "phải phép", "tẩy trang", "đóng trò", "xạ khuẩn", "quán thông", "ủ ê", "học khoá", "ảnh ảo", "hậu tạ", "kế cận", "bảo cái", "cứu khổ", "trúc trắc", "tuần tiễu", "mạc nối", "cận kim", "cử bộ", "tinh khiết", "cất mình", "nhà ngủ", "đồng thòa", "ngọc bích", "tái nhiễm", "tư tố", "mọc mộng", "cơ vòng", "tăng tiết", "dậu mà", "cắn trộm", "múa may", "song công", "phát sầu", "phát khùng", "ngoái cổ", "héo hắt", "sáng sớm", "ngòm ngõi", "le lé", "cương toả", "gà thiến", "rau mương", "đãi chiếu", "giáng họa", "khốn khổ", "mộ táng", "bôi trơn", "bơ bải", "trống không", "địa đạo", "tầm nhìn", "thói quen", "quái gở", "tế tân", "loang lỗ", "hồi hưu", "vỡ lòng", "cá trắm", "cua đinh", "cả lửa", "địa chất", "đấu giá", "bấp bông", "xa lạ", "hoả đàn", "cù nhây", "nhà sàn", "đậm đà", "nhỡ lời", "hữu ái", "phân lớp", "lập kế", "lủi thủi", "đông tiết", "săn bắn", "lập hiến", "nổ mìn", "công dụng", "tịnh vô", "sắp hàng", "nử tử", "cha ghẻ", "tế toái", "dầu cốc", "cái trò", "chữ ngả", "bịt mắt", "khai khoáng", "rù rù", "thuỷ ngân", "ấp úng", "quí ông", "bổ dụng", "mũ trụ", "cựu truyền", "thổi phồng", "khoanh bí", "đảo chính", "tử ngoại", "kềnh càng", "giết tróc", "thông sức", "ba nhất", "trướng hồng", "trọng tội", "cứng cỏi", "thuộc làu", "văn tự", "cửa công", "nông giang", "đoản kiếm", "uể oải", "công thương", "chồng chềnh", "ba que", "tiêu sắc", "qui phạm", "đỉa đói", "danh ngôn", "tiến bộ", "bố y", "trệ khí", "bùi nhùi", "tử nạn", "thu thanh", "bẻ cục", "ngặt nghẹo", "chín sữa", "xung kích", "máy bào", "ăn bẩn", "đồng nhiệm", "tất tay", "cẩn tắc", "thiển ý", "thở ra", "sơ học", "thưa chuyện", "con nước", "dụng công", "phụ kiện", "của công", "hộp đêm", "gà gà", "trợ lực", "bút lục", "khăm khẳm", "đoạ lạc", "permanganat kali", "trung kiên", "dạ dày", "nam tước", "sã suồng", "co giật", "chua ngoa", "lớp lớp", "suy biến", "thập điều", "tận hiếu", "mặc cả", "lốp đốp", "phải như", "mây song", "nhầy nhầy", "lớp ghép", "oanh tạc", "nhảy tót", "tuyển binh", "ngày kia", "nhãn viêm", "vò vẽ", "phản trắc", "cám lợn", "cóc bùn", "lúa sạ", "dễ dãi", "say mèềm", "phù phép", "xáo trộn", "chào đời", "sương tuyết", "khiếm thính", "cu đơ", "súng sáu", "đèn cây", "đỡ lòng", "kèm theo", "cá giếc", "đa đinh", "rung cảm", "thông dụng", "phân lập", "thiên sứ", "bán thế", "kếch xù", "hoà hai", "tấm gương", "hà y", "sương mai", "tỳ tướng", "tường vi", "bố thí", "hiệp vần", "tứ chi", "ghế băng", "mai mỉa", "đổi lẫn", "hối tiếc", "ăn chùng", "ngẳng nghiu", "âu cũng", "xoi xỉa", "phó bảng", "chữ thập", "nguyên hình", "đắc sủng", "ngăn rào", "bạch tuyết", "hiệu diệu", "ra đời", "đi đôi", "mao mạch", "chiêu nạp", "sểnh tay", "làm kiểu", "díp xe", "tiếp viện", "cung nguyệt", "coi được", "thánh cung", "khởi nghiệp", "bột lọc", "đánh đồn", "dài dài", "lỡ bước", "thi thoảng", "tự hồ", "co mình", "phép toán", "công nông", "làm chủ", "phá đề", "đày đọa", "dính máu", "thụt lùi", "đáng sợ", "bằng mặt", "đục lầm", "sư bác", "trắc ẩn", "trú ẩn", "lèo khoèo", "thói tục", "nam giao", "say khướt", "lan đất", "thành công", "xe hòm", "ngôn hành", "tom chát", "nắng ráo", "đăng kí", "vuốt ve", "cỏ dại", "đón hỏi", "bí đỏ", "mục kích", "làm dầm", "thiếu tá", "tòng vong", "cọm rọm", "nhập tịch", "mềm hóa", "thắng cảnh", "tủ đá", "giả tiếng", "dây thun", "dọn giọng", "bụng xụng", "giảng viên", "na mô", "lập đàn", "cải lương", "đồng đất", "cao tổ", "chuyển mình", "thuốc sán", "thái cổ", "lục vị", "cúng bái", "cốt liệu", "cao danh", "đẳng cự", "a nguỵ", "khuyến ngư", "tự hành", "lai căng", "đại lễ", "phân hạng", "cởi lốt", "văn khế", "thương chánh", "tiểu yêu", "khởi sự", "thả ga", "động học", "rửa mặn", "kiêu dũng", "quyền môn", "trải đời", "nghiệm pháp", "quệch quạc", "phiêu dật", "xương đùi", "búp đa", "nguyên tố", "làm ồn", "niệu quản", "phép cộng", "cày ngang", "đốc chiến", "rộng chân", "qua lâu", "phản nghĩa", "cảnh vực", "hết trọi", "phụng phệu", "thiệt hơn", "e nể", "thức thức", "độc âm", "trưởng giả", "lỡ lầm", "tân thờl", "tuốt tuộc", "phạm quy", "chú giải", "thợ ngôi", "nương nhẹ", "điếu phúng", "toán trưởng", "tâm trương", "khác biệt", "tòng phạm", "dẫn thủy", "bộc lôi", "lẽ phải", "mặt cưa", "tiện thể", "ảnh ẩn", "trộm nghĩ", "cốt sắt", "thịnh tình", "mã hiệu", "tâm ngoài", "bền mùi", "chẳng những", "nguy cơ", "vượn vá", "hảo a", "nhịp điệu", "kẹo mứt", "mộng ước", "phác đồ", "bang biện", "hư tự", "thẩm quyền", "cô dâu", "nước đại", "thơ thới", "tứ thanh", "to kếch", "trò vui", "gạch men", "báo tử", "tam quy", "dong lá", "hải đoàn", "hổ huyệt", "lảng vảng", "đắt chồng", "sở cứ", "tứ cực", "sưng vều", "vô hậu", "động hớn", "vẹn toàn", "hương thảo", "xuất nhập", "không môn", "sung sức", "quả thận", "huyết trầm", "dừng bánh", "bánh đúc", "vặn mình", "bạch ngọc", "viện hàm", "chạy cấn", "khấn nguyền", "hoàng hôn", "hương hoa", "chơi chòi", "pháp viện", "háu ăn", "vinh hạnh", "thọ chung", "cự mã", "bỏ vốn", "lờm xờm", "người người", "tự mồi", "ổ chuột", "thực sự", "trò trẻ", "nguây nguẩy", "thảo hiền", "bàn xiết", "báo hỷ", "lá bánh", "trao đổi", "xé phay", "chuyển toán", "tích tắc", "tanh tách", "huyết tộc", "lừ đừ", "khởi phát", "thừa sai", "phẩm trật", "đề nghị", "đinh dép", "réo réo", "kẻ khó", "dại khờ", "chẳng ngờ", "nếp cũ", "kình nghê", "đuôi diều", "quê quán", "mụ mẫm", "qui nạp", "trắng trợt", "bán hàng", "gỗ dác", "viện trợ", "kể hạnh", "hờ hờ", "gả bán", "cá chình", "non kém", "kẻ trộm", "ứ tắc", "bã xõa", "độc hại", "đồng la", "báo giới", "tứ thể", "câu quăng", "dự thơm", "am mây", "bệ tiền", "tình lụy", "cua nhện", "mau lẹ", "hội diễn", "nhà giai", "sinh tử", "kiêu kiêu", "tâm nhĩ", "hoả thuyền", "da màu", "chớ gì", "tự xử", "chạy hiệu", "dấy loạn", "bĩu môi", "vải nhựa", "đến thế", "đánh chén", "cứt sắt", "ác dâm", "quạnh hiu", "đứng lớp", "cẩn tấu", "chữ nho", "định sẵn", "tiễn chân", "lễ ca", "ống thử", "gia miện", "thoái thu", "bắt chuyện", "bịt bùng", "san bằng", "từ chêm", "sặc tiết", "ong chúa", "mắm rươi", "thầy dòng", "cảnh nọng", "ngoại giả", "bắt bánh", "ngọn thỏ", "tã lót", "nhiệm kỳ", "xế bóng", "cháo thí", "hơi đồng", "thanh răng", "vảy mại", "bàn dát", "động đực", "ngu xuẩn", "sổ thai", "nhàn nhã", "sừn sựt", "lầy bầy", "giấy than", "hồng vận", "nghề văn", "nghiến răng", "mừng lòng", "nghiêng nghé", "thi văn", "năm mươi", "ngoại nhậm", "màn đêm", "ông nội", "đồng học", "phòng hờ", "chèn ngoẻn", "vật quyền", "thuỷ tạ", "mải miết", "ở nể", "tịch biên", "phân bắc", "trai ngọc", "ngổ núi", "tú ú", "cuồng si", "vọng canh", "va đập", "đưa đường", "chống chỏi", "sáng ý", "lân gia", "rỗng ruột", "mổ cò", "cầu hôn", "nối ngôi", "dệt kim", "sa trường", "can dự", "bùng nhùng", "phỏng ước", "hải yến", "bạc đà", "phá đám", "tuyền đài", "phong ấp", "khẩn điền", "trang chủ", "chuông phiến", "lang trung", "trằm trồ", "êm đềm", "thổ nghi", "vô thức", "bút lông", "bản vị", "cả cả", "cau bụng", "tủ sắt", "âm đức", "đả phá", "kềnh kệnh", "tô điểm", "món canh", "nữ kiệt", "thỏa thuê", "vi chấn", "phanh xác", "ngã xoài", "nói giễu", "uỷ lĩnh", "cũ rích", "rửa ráy", "sĩ quan", "mạnh hạ", "cá mòi", "đê kè", "trật tự", "một phép", "chéo chó", "sá nghĩ", "phăn phắt", "bát tiên", "nhiệt liệt", "luật khoa", "nhận mạng", "cho nên", "nhắn tìm", "đền rồng", "huyền đề", "có chí", "phụ hệ", "ngã bệnh", "hề gì", "ác ó", "mấy nả", "võ phục", "minh chứng", "phương thuốc", "chạc oạc", "xe hỏa", "thi hành", "nhà nghèo", "thất chí", "cẩn chí", "khai căn", "kiêng nể", "xì xồ", "giữ kẽ", "ngoại cảnh", "hạ thấp", "bây dai", "anh linh", "giấy lọc", "tạ tình", "chơi nhau", "dở òm", "tu tiên", "tiền đình", "vân yên", "tố khổ", "thêm bớt", "thuốc xỉa", "nhão nhét", "không lực", "anh cả", "ăn gỏi", "bia chai", "lênh phênh", "đối cách", "khởi điểm", "thám sát", "nhiễm điện", "cạnh khía", "khuyển ưng", "linh đơn", "hệ lụy", "lép xép", "kí ninh", "lâm viên", "rễ con", "trau dồi", "lộ chuyện", "giỗ hết", "cận huống", "ma luyện", "trí trá", "tiếng rằng", "phủ định", "áo lá", "quản tượng", "khoan hòa", "ngốn ngấu", "kéo cày", "bộ ba", "cứng gối", "khởi tử", "xây xẩm", "mâm xôi", "khoảnh khoái", "sâu vẽ", "bánh tráng", "bì bịch", "dốc dác", "đấu chọi", "mặc khách", "dây thắng", "lựu pháo", "sản hậu", "tôm tép", "tội tình", "nhàn tản", "rắn độc", "lòng đất", "trúng phong", "nhuần nhuỵ", "đơm đặt", "uỷ nhiệm", "bơi nghiêng", "lưỡi chích", "hạng bét", "phôi vị", "độc bình", "vải tuyn", "nhanh nhạy", "mày ngài", "sân cỏ", "khoá trình", "mở màn", "rõ mặt", "quang hợp", "an ổn", "bay nhảy", "nhí nhảnh", "tơ mơ", "lúa má", "di cư", "nói là", "bôi vôi", "khù khì", "tiểu đề", "khoáng dã", "béo nịch", "mặt nặng", "nón gỗ", "chỉ nhị", "giấy sáp", "tải ba", "phì nộn", "sầu riêng", "gân bò", "mít ướt", "gánh đểu", "biệt tin", "duy tha", "chính qui", "định ảnh", "tín nghĩa", "i uôm", "đề đốc", "cù nhầy", "ưng chuẩn", "nằm dài", "sung chức", "ác đạo", "cắt đặt", "chỉnh hình", "sâm nhung", "bát tiết", "thi pháp", "nông tang", "còm cọm", "dứt lời", "tính toan", "ảo giác", "lưu dụng", "gang tay", "viên cốm", "dức mắng", "quyến luyến", "ẩm ương", "bõ chi", "bẩm tính", "cà lơ", "đốc suất", "trí não", "địa sinh", "mê hoảng", "chối tai", "phong ấn", "fi dê", "nội đồng", "bỏ neo", "giấy mời", "công phu", "thành niên", "đớn đời", "nhay nhay", "thời buổi", "hoàn nguyên", "quyết thắng", "sửa đổi", "đè nén", "móng guốc", "hình khối", "đào chú", "topo học", "lảo đảo", "chuối hoa", "chiều dài", "mãn địa", "thẳng phép", "rí rách", "ngang trái", "làu bàu", "sơn dã", "hoan nghinh", "mai mái", "bộ luật", "nhẫn nhịn", "xăm mình", "vốn liếng", "nghi nan", "bí rì", "ngư loại", "quốc lộ", "giày ban", "lõng võnc", "dân viện", "giao cấu", "công bạt", "luật pháp", "sinh tiền", "ù ờ", "cáu kỉnh", "gieo rắc", "dầu trai", "yếu mục", "nét phóng", "năng động", "bánh khoái", "ở truồng", "cồm cộm", "bơ sờ", "kì ngộ", "thẹn lòng", "thấy mồ", "mặt chữ", "tháng một", "bừa lia", "trở mặt", "bầu chọn", "thể diện", "cả sợ", "nói chung", "tội nghiệp", "bủn sẻn", "bầu bán", "bắp vế", "chán đời", "xót ruột", "lận đận", "chả chó", "lem nhem", "lá ngọn", "bưu phiếu", "nghiên cứu", "hùng cường", "cú móc", "kẻ giờ", "kim giao", "xoay trần", "bất kì", "cánh quýt", "than phiền", "ẩn lánh", "nhen nhúm", "phát giác", "mía lau", "ôm đít", "quyền nghi", "đông đúc", "bong vụ", "đoàng đoàng", "tự điển", "cháo ám", "bò dái", "mộ đạo", "bạch cập", "đối kháng", "đáo tuế", "đi kiện", "sâu hỏm", "khất lần", "tứ bảo", "chung đỉnh", "trật chân", "quyền uy", "xui bảo", "khối tình", "đoan trang", "tỏ ra", "hơn đứt", "đồ đểu", "son sắt", "hoa xim", "đắt lời", "làm xong", "đỏ gây", "bách quan", "đẹp đôi", "ác là", "phòng ngự", "tràn lan", "cô tông", "hàng thần", "lum khum", "làm vầy", "gầm trời", "tình thâm", "cả tin", "có vẻ", "sơn pháo", "đặc mệnh", "quy tắc", "heo dầu", "sát phạt", "ngữ vị", "quân lệnh", "đan cử", "anh nhi", "ừ hữ", "hậu đại", "phiêu diêu", "xưng danh", "bối cảnh", "đình cứu", "chẹn cổ", "buồn rượi", "chiến đoàn", "hiên ngang", "cây viết", "cố đạo", "sa lầy", "chống tăng", "kiều diễm", "cò quay", "cất mồm", "tì tạch", "kìm nén", "ẩm xì", "hội thảo", "móng rồng", "cấu thành", "chủ đích", "cộc cằn", "trúng giải", "nhân nhượng", "tân khách", "thết đãi", "ở đời", "cao xa", "phu kíp", "san đàn", "cay sè", "ra trận", "say sóng", "trạng thái", "xiên khoai", "nhăn mày", "đơn kiện", "văn nhân", "rửng mỡ", "tồn giữ", "sư cụ", "nguỵ tạo", "trách phận", "cải tạo", "lửa đạn", "dị nhiễm", "trung cao", "chăn gối", "chịu nhịn", "chiền chiện", "em dâu", "ác báo", "thức uống", "điều binh", "thân xương", "quan giới", "giao hữu", "lầm lỡ", "đưa võng", "thí dụ", "bã dầu", "hau háu", "màn sắt", "cừu gia", "tính liệu", "xanh tươi", "thuỷ quân", "dừng tay", "kì tình", "tin sương", "hoàng bào", "cực tím", "chi mai", "thôn xóm", "bam cửa", "hòm chân", "dấn vốn", "cầu kỳ", "mắt xanh", "lão khoa", "quốc hồn", "bàn độc", "viễn phương", "ráo hoảnh", "bàn thờ", "cháu rể", "đều tay", "trừ tà", "sát khí", "hội chủ", "bọ chét", "thợ đấu", "nghĩa quân", "cầm kì", "hoàn tán", "chân khớp", "tiểu đậu", "rộc rạc", "đảo lộn", "tân bằng", "chờ thời", "mì thánh", "lúc nãy", "độc ca", "nghi kỵ", "tiểu vương", "cậu ấm", "phép thuật", "mạch đập", "đưa ra", "lệnh chỉ", "thi bá", "thừa ưa", "hé răng", "nấn ná", "chè tàu", "ành ành", "nói chi", "hào nhoáng", "bằng lăng", "ăn tham", "tôn giáo", "ỷ thế", "tròm trèm", "khí hiếm", "hán ngữ", "kiêm bị", "sang trang", "nhà giàu", "ngày xanh", "phán đoán", "bại tướng", "phát điện", "hàn vi", "ai mượn", "van vát", "chiền chiền", "giăng há", "ngang bè", "bề cao", "phao tiêu", "nước vối", "chun chủn", "tre pheo", "bỏ lò", "rượu ngang", "thất luật", "suy lí", "nghênh tân", "sức khoẻ", "axit axetic", "ông tạo", "đầy tuổi", "vàng anh", "phòng hoả", "hùn vào", "dạy kèm", "phỏng vấn", "quí vật", "thấy kinh", "nấm men", "sút kém", "ủ tươi", "mái bằng", "nghĩa quyên", "văn xã", "oan khúc", "già cốc", "nhọ nhem", "hoa cúc", "thành uỷ", "nằm xuống", "bàn rùn", "kèo nhèo", "chênh hênh", "kế hiền", "mâm mê", "cử hành", "chẻ vỏ", "chó đái", "tổ truyền", "linh tính", "quai cồng", "đòn triêng", "thấp mưu", "điểm diện", "ba khía", "bước hụt", "cúc tần", "biếm hoạ", "giun dẹp", "dị trương", "khắc ảnh", "rau má", "cá lẻ", "dặt dẹo", "dự trù", "gia dĩ", "giãi bày", "tâm linh", "kế toán", "dương thế", "rũ rượi", "dinh luỹ", "thuê bao", "cứu thương", "trích dẫn", "cần vụt", "điện tử", "ấu thể", "lìm lịm", "học sinh", "sinh viên", "viên chức", "chức năng", "năng lực", "lực lượng", "lượng số", "số học", "học tập", "tập trung", "trung tâm", "tâm lý", "lý thuyết", "phục hồi", "hồi phục", "phục vụ", "vụ việc", "việc làm", "làm việc", "nhà cửa", "cửa hàng", "hàng hoá", "hoá học", "học hỏi", "hỏi đáp", "đáp án", "án mạng", "mạng lưới", "lưới điện", "điện thoại", "thoại kịch", "kịch bản", "bản chất", "chất lượng", "lượng tử", "tử tế", "tế bào", "bào chế", "chế độ", "độ cao", "cao tốc", "tốc độ", "ẩm thực", "thực phẩm", "chất liệu", "liệu pháp", "pháp luật", "luật lệ", "lệ phí", "phí tổn", "tổn thất", "thất bại", "bại trận", "trận đấu", "đấu tranh", "tranh luận", "luận án", "thư từ", "từ vựng", "tập thể", "thể thao", "thao tác", "tác phẩm", "phẩm giá", "giá trị", "trị giá", "giá cả", "cả nhà", "nhà trường", "trường học", "học đường", "đường phố", "phố xá", "tội phạm", "phạm tội", "tội lỗi", "lỗi lầm", "lầm lỗi", "lỗi thời", "thời gian", "gian lận", "nghèo khó", "khó khăn", "áo dài", "dài hạn", "chế biến", "biến đổi", "mới mẻ", "cơm nước", "nước ngoài", "ngoài trời", "trời đất", "đất nước", "nước nhà", "nhà nước", "nước mắt", "mắt kính", "kính cận", "cận thị", "thị lực", "lực sĩ", "quan chức", "chức vụ", "vụ án", "án lệ", "làng xóm", "xóm làng", "làng nghề", "nghiệp vụ", "lợi nhuận", "bút chì", "than củi", "củi lửa", "đạn dược", "dược phẩm", "trang phục", "sức khỏe", "khỏe mạnh", "mạnh mẽ", "tay chân", "chân tay", "tay nghề", "công nghiệp", "đoàn kết", "kết nối", "nối tiếp", "tiếp tục", "tục ngữ", "ngữ pháp", "pháp lý", "lý do", "do dự", "dự đoán", "già trẻ", "trẻ em", "em bé", "bé nhỏ", "nhỏ bé", "mày râu", "râu tóc", "tóc bạc", "bạc đầu", "đầu óc", "óc não", "não bộ", "bộ phận", "phận sự", "sự việc"];
 
-/* ============== HELPERS ============== */
-function toast(msg){
-  const wrap = document.getElementById('toastWrap');
-  const el = document.createElement('div');
-  el.className = 'toast';
-  el.textContent = msg;
-  wrap.appendChild(el);
-  setTimeout(()=>{ if(el.parentNode) el.remove(); }, 2800);
-}
-
-function escapeHtml(str){
-  return String(str==null?'':str).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-
-function myChatName(){
-  return currentUser ? currentUser.uid : ('Khách#' + state.playerId);
-}
-
-/* ============== PROFILE CACHE ============== */
-const chatProfileCache = {};
-function fetchChatProfile(uid){
-  if(chatProfileCache[uid]) return Promise.resolve(chatProfileCache[uid]);
-  return db.ref('user_profiles/' + uid).once('value').then(s=>{
-    const p = (s.exists() && s.val()) || {};
-    chatProfileCache[uid] = p;
-    return p;
-  }).catch(()=>({}));
-}
-
-/* ============== WORLD CHAT ============== */
-const WORLD_CHAT_ROOM = 'world_fishing';
-const chatMessagesEl = document.getElementById('chatMessages');
-const worldChatInput = document.getElementById('worldChatInput');
-const worldChatSendBtn = document.getElementById('worldChatSendBtn');
-
-let worldChatReady = false;
-
-function renderChatMsg(key, m){
-  if(!m || document.getElementById('cm_'+key)) return;
-  const row = document.createElement('div');
-  row.id = 'cm_'+key;
-
-  if(m.sys){
-    let extraClass = '';
-    if(m.noituWin) extraClass = ' noituWin';
-    else if(m.noitu) extraClass = ' noitu';
-    else if(m.vtvWin) extraClass = ' vtvWin';
-    else if(m.vtv) extraClass = ' vtv';
-    row.className = 'msg sys' + extraClass;
-    row.innerHTML = `<div class="bubble2">${escapeHtml(m.t)}</div>`;
-    chatMessagesEl.appendChild(row);
-  } else {
-    const me = m.s === myChatName();
-    row.className = 'msg' + (me ? ' me' : '');
-    const time = new Date(m.ts||Date.now()).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});
-    const cached = chatProfileCache[m.s];
-    const displayName = (cached && cached.displayName) ? cached.displayName : m.s;
-    const avatarHtml = (cached && cached.avatar) ? `<img src="${escapeHtml(cached.avatar)}" alt="">` : '👤';
-
-    let bubbleHtml;
-    if(m.type === 'room' && m.roomId){
-      const isOwnRoom = m.s === myChatName();
-      bubbleHtml = `
-        <div class="roomInviteCard" data-room-id="${escapeHtml(m.roomId)}">
-          <div class="ricTitle">⚔️ Phòng ${escapeHtml(m.roomId)}</div>
-          <div class="ricBet">Cược: ${(m.bet||0).toLocaleString('vi-VN')} 🪙 mỗi người</div>
-          <button class="ricJoinBtn" data-join-room="${escapeHtml(m.roomId)}" ${isOwnRoom?'disabled':''}>${isOwnRoom?'Phòng của bạn':'▶️ Vào chơi'}</button>
-        </div>`;
-    } else {
-      bubbleHtml = `<div class="bubble2">${escapeHtml(m.t)}</div>`;
-    }
-
-    row.innerHTML = `
-      <div class="av" data-uid="${escapeHtml(m.s)}">${avatarHtml}</div>
-      <div>
-        <div class="name" data-uid="${escapeHtml(m.s)}">${escapeHtml(displayName)}</div>
-        ${bubbleHtml}
-        <div class="msgTime">${time}</div>
-      </div>
-    `;
-    chatMessagesEl.appendChild(row);
-
-    const avElNode = row.querySelector('.av');
-    const nameElNode = row.querySelector('.name');
-    if(avElNode) avElNode.addEventListener('click', ()=> openOtherProfileModal(m.s));
-    if(nameElNode) nameElNode.addEventListener('click', ()=> openOtherProfileModal(m.s));
-
-    if(!cached){
-      fetchChatProfile(m.s).then(p=>{
-        if(!p) return;
-        if(p.avatar && avElNode){
-          avElNode.innerHTML = `<img src="${escapeHtml(p.avatar)}" alt="">`;
-        }
-        if(p.displayName && nameElNode){
-          nameElNode.textContent = p.displayName;
-        }
-      });
-    }
-  }
-
-  while(chatMessagesEl.childElementCount > 80){
-    chatMessagesEl.removeChild(chatMessagesEl.firstChild);
-  }
-  chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
-}
-
-db.ref('chats/' + WORLD_CHAT_ROOM).limitToLast(60).on('child_added', (snap)=>{
-  renderChatMsg(snap.key, snap.val());
-});
-setTimeout(()=>{ worldChatReady = true; }, 1500);
-
-/* Join room từ thẻ mời */
-chatMessagesEl.addEventListener('click', (e)=>{
-  const btn = e.target.closest('[data-join-room]');
-  if(!btn || btn.disabled) return;
-  const roomId = btn.getAttribute('data-join-room');
-  if(!roomId) return;
-  window.location.href = 'dautruong/?join=' + encodeURIComponent(roomId);
-});
-
-function sendWorldChat(){
-  const val = worldChatInput.value.trim();
-  if(!val) return;
-  if(noituState && noituState.pending){
-    toast('⏳ Bot đang nghĩ từ, chờ 5 giây nữa nhé!');
-    return;
-  }
-  worldChatInput.value = '';
-  if(handleNoituCommand(val)) return;
-  if(handleNoituAnswer(val)) return;
-  if(handleVtvCommand(val)) return;
-  if(handleVtvAnswer(val)) return;
-  db.ref('chats/' + WORLD_CHAT_ROOM).push({ s: myChatName(), t: val, ts: Date.now() }).catch(()=>{
-    toast('Không gửi được tin nhắn, kiểm tra mạng!');
+  // Build index by first syllable for fast lookup
+  const wordSet = new Set(WORD_LIST);
+  const byFirst = {};
+  WORD_LIST.forEach(w => {
+    const first = w.split(' ')[0];
+    if (!byFirst[first]) byFirst[first] = [];
+    byFirst[first].push(w);
   });
-  noteNoituChatter(myChatName());
-}
 
-worldChatSendBtn.addEventListener('click', sendWorldChat);
-worldChatInput.addEventListener('keydown', (e)=>{
-  if(e.key==='Enter'){ e.preventDefault(); sendWorldChat(); }
-});
+  // Game state (client-side, per user session)
+  let game = null; // { lastWord, used: Set, timer, startTs, chain: number }
 
-const btnGoArena = document.getElementById('btnGoArena');
-if(btnGoArena){
-  btnGoArena.addEventListener('click', ()=>{ window.location.href = 'dautruong'; });
-}
+  const BOT_NAME = '🤖 Bot Nối Từ';
+  const TIME_LIMIT = 15000; // 15 giây
 
-/* ============== PROFILE MODAL ============== */
-const profileOverlayEl = document.getElementById('profileOverlay');
-const profileKbBtnEl = document.getElementById('profileKbBtn');
-let currentProfileTargetUid = null;
-let kbCheckToken = 0;
+  function normalize(str) {
+    return str.trim().toLowerCase().replace(/\s+/g, ' ');
+  }
 
-function updateKbBtnVisibility(){
-  if(!profileKbBtnEl) return;
-  profileKbBtnEl.classList.remove('sent');
-  profileKbBtnEl.textContent = '🤝 Kết bạn';
-  profileKbBtnEl.disabled = false;
-  profileKbBtnEl.style.display = 'none';
+  function getLastSyllable(word) {
+    const parts = normalize(word).split(' ');
+    return parts[parts.length - 1];
+  }
 
-  const targetId = currentProfileTargetUid;
-  const myId = currentUser ? myChatName() : null;
-  if(!targetId || !myId || targetId === myId) return;
+  function pickRandomWord(excludeSet) {
+    const candidates = WORD_LIST.filter(w => !excludeSet.has(w));
+    if (candidates.length === 0) return null;
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
 
-  const myToken = ++kbCheckToken;
-  db.ref('friends/' + myId + '/' + targetId).once('value').then(snap=>{
-    if(myToken !== kbCheckToken) return;
-    if(snap.exists()) return;
-    db.ref('friend_requests/' + targetId + '/' + myId).once('value').then(snap2=>{
-      if(myToken !== kbCheckToken) return;
-      if(snap2.exists()) return;
-      profileKbBtnEl.style.display = 'flex';
+  function pickNextWord(lastSyllable, used) {
+    const list = (byFirst[lastSyllable] || []).filter(w => !used.has(w));
+    if (list.length === 0) return null;
+    return list[Math.floor(Math.random() * list.length)];
+  }
+
+  function postBot(text) {
+    messagesRef.push({
+      type: 'chat',
+      sender: BOT_NAME,
+      text: text,
+      time: Date.now()
     });
-  }).catch(()=>{});
-}
+  }
 
-function sendKbRequest(){
-  const myId = myChatName();
-  const targetId = currentProfileTargetUid;
-  if(!currentUser || !targetId || targetId === myId) return;
-  profileKbBtnEl.disabled = true;
-  db.ref('friends/' + myId + '/' + targetId).once('value').then(snap=>{
-    if(snap.exists()){
-      toast('Hai bạn đã là bạn bè rồi! 🤝');
-      profileKbBtnEl.style.display = 'none';
+  function postSystem(text) {
+    messagesRef.push({
+      type: 'system',
+      text: text,
+      time: Date.now()
+    });
+  }
+
+  function clearGameTimer() {
+    if (game && game.timer) {
+      clearTimeout(game.timer);
+      game.timer = null;
+    }
+  }
+
+  function endGame(reason) {
+    clearGameTimer();
+    if (game) {
+      postBot(`⏹️ Hết game! ${reason}\nChuỗi nối được: ${game.chain} từ.\nGõ /botnt để chơi lại.`);
+    }
+    game = null;
+  }
+
+  function startTimer() {
+    clearGameTimer();
+    if (!game) return;
+    game.startTs = Date.now();
+    game.timer = setTimeout(() => {
+      if (game) {
+        endGame('Hết giờ 15 giây! Bạn đã thua.');
+      }
+    }, TIME_LIMIT);
+  }
+
+  function startBotGame() {
+    if (game) {
+      postBot('⚠️ Bạn đang chơi rồi. Hãy nối từ hiện tại hoặc đợi hết giờ.');
       return;
     }
-    db.ref('friend_requests/' + targetId + '/' + myId).once('value').then(snap2=>{
-      if(snap2.exists()){
-        toast('Đã gửi lời mời kết bạn trước đó rồi!');
-        profileKbBtnEl.style.display = 'none';
+    const used = new Set();
+    const first = pickRandomWord(used);
+    if (!first) {
+      postBot('Lỗi: không tìm được từ để bắt đầu.');
+      return;
+    }
+    used.add(first);
+    game = {
+      lastWord: first,
+      used: used,
+      timer: null,
+      startTs: Date.now(),
+      chain: 1
+    };
+    postBot(`🎮 Bắt đầu Nối Từ!\nTừ của bot: 「${first}」\nHãy nối trong 15 giây (từ bắt đầu bằng 「${getLastSyllable(first)}」).\nTrả lời đúng + nhanh → +5 xu!`);
+    startTimer();
+  }
+
+  async function handlePlayerWord(rawText) {
+    if (!game || !myName) return false;
+    const text = normalize(rawText);
+    // Must be two syllables roughly
+    if (!text.includes(' ') || text.split(' ').length !== 2) {
+      postBot(`❌ Từ phải là từ ghép 2 tiếng. Ví dụ: "học sinh"`);
+      return true; // consumed
+    }
+    if (!wordSet.has(text)) {
+      postBot(`❌ Từ 「${text}」 không có trong từ điển bot. Thử từ khác!`);
+      return true;
+    }
+    if (game.used.has(text)) {
+      postBot(`❌ Từ 「${text}」 đã dùng rồi. Không được lặp!`);
+      return true;
+    }
+    const expected = getLastSyllable(game.lastWord);
+    const actualFirst = text.split(' ')[0];
+    if (actualFirst !== expected) {
+      postBot(`❌ Sai! Cần bắt đầu bằng 「${expected}」 (từ bot là 「${game.lastWord}」)`);
+      return true;
+    }
+    // Valid!
+    const elapsed = Date.now() - game.startTs;
+    clearGameTimer();
+    game.used.add(text);
+    game.chain++;
+    game.lastWord = text;
+
+    // +5 xu
+    myXu += 5;
+    updateXuDisplay();
+    await saveXu();
+
+    postBot(`✅ Đúng rồi! (+5 xu) ⏱️ ${Math.round(elapsed/1000)}s\nTổng xu: ${myXu}\nChuỗi: ${game.chain}`);
+
+    // Bot continues
+    const next = pickNextWord(getLastSyllable(text), game.used);
+    if (!next) {
+      endGame('Bot hết từ để nối! Bạn thắng rồi 🎉');
+      return true;
+    }
+    game.used.add(next);
+    game.chain++;
+    game.lastWord = next;
+    postBot(`Bot nối: 「${next}」\nBạn nối tiếp trong 15 giây (bắt đầu bằng 「${getLastSyllable(next)}」)`);
+    startTimer();
+    return true;
+  }
+
+  async function saveXu() {
+    if (!myName) return;
+    const key = toKey(myName);
+    try {
+      await usersRef.child(key).update({ xu: myXu });
+    } catch (e) {
+      console.error('Save xu failed', e);
+    }
+  }
+
+  function updateXuDisplay() {
+    xuDisplay.textContent = `💰 ${myXu} xu`;
+  }
+
+  // ========== AUTH & CHAT ==========
+  function showMsg(text, isError=true){
+    loginMsg.style.color = isError ? 'var(--danger)' : 'var(--success)';
+    loginMsg.textContent = text;
+  }
+
+  function setLoading(loading){
+    loginBtn.disabled = loading;
+    registerBtn.disabled = loading;
+  }
+
+  function toKey(name){
+    return name.trim().toLowerCase().replace(/[.#$\[\]\/]/g, '_');
+  }
+
+  async function register(){
+    const name = usernameInput.value.trim();
+    const pass = passwordInput.value;
+    if(!name || !pass){ showMsg('Vui lòng nhập đầy đủ tên và mật khẩu'); return; }
+    if(name.length < 2){ showMsg('Tên đăng nhập quá ngắn'); return; }
+    if(pass.length < 3){ showMsg('Mật khẩu phải từ 3 ký tự trở lên'); return; }
+
+    setLoading(true);
+    const key = toKey(name);
+    try{
+      const snap = await usersRef.child(key).get();
+      if(snap.exists()){
+        showMsg('Tên đăng nhập đã tồn tại, vui lòng đăng nhập');
+        setLoading(false);
         return;
       }
-      db.ref('friend_requests/' + myId + '/' + targetId).once('value').then(snap3=>{
-        if(snap3.exists()){
-          db.ref('friends/' + myId + '/' + targetId).set(true);
-          db.ref('friends/' + targetId + '/' + myId).set(true);
-          db.ref('friend_requests/' + myId + '/' + targetId).remove();
-          db.ref('friend_requests/' + targetId + '/' + myId).remove();
-          toast('Đã kết bạn thành công! 🤝');
-          profileKbBtnEl.style.display = 'none';
-        } else {
-          db.ref('friend_requests/' + targetId + '/' + myId).set({ from: myId, ts: Date.now() }).then(()=>{
-            toast('Đã gửi lời mời kết bạn! 🤝');
-            profileKbBtnEl.style.display = 'none';
-          });
-        }
-      }).finally(()=>{ profileKbBtnEl.disabled = false; });
+      await usersRef.child(key).set({
+        displayName: name,
+        password: pass,
+        xu: 0,
+        createdAt: Date.now()
+      });
+      showMsg('Đăng ký thành công! Đang đăng nhập...', false);
+      loginSuccess(name, 0);
+    }catch(e){
+      showMsg('Lỗi: ' + e.message);
+      setLoading(false);
+    }
+  }
+
+  async function login(){
+    const name = usernameInput.value.trim();
+    const pass = passwordInput.value;
+    if(!name || !pass){ showMsg('Vui lòng nhập đầy đủ tên và mật khẩu'); return; }
+
+    setLoading(true);
+    const key = toKey(name);
+    try{
+      const snap = await usersRef.child(key).get();
+      if(!snap.exists()){
+        showMsg('Tài khoản chưa tồn tại, hãy bấm Đăng ký');
+        setLoading(false);
+        return;
+      }
+      const data = snap.val();
+      if(data.password !== pass){
+        showMsg('Sai mật khẩu');
+        setLoading(false);
+        return;
+      }
+      loginSuccess(data.displayName, data.xu || 0);
+    }catch(e){
+      showMsg('Lỗi: ' + e.message);
+      setLoading(false);
+    }
+  }
+
+  function loginSuccess(name, xu){
+    myName = name;
+    myXu = xu || 0;
+    localStorage.setItem(LS_KEY, name);
+    enterChat();
+  }
+
+  function enterChat(){
+    loginScreen.style.display = 'none';
+    chatScreen.style.display = 'flex';
+    document.getElementById('headerName').textContent = myName;
+    document.getElementById('headerAvatar').src = 'https://api.dicebear.com/7.x/initials/svg?seed=' + encodeURIComponent(myName);
+    updateXuDisplay();
+    listenMessages();
+  }
+
+  function logout(){
+    clearGameTimer();
+    game = null;
+    localStorage.removeItem(LS_KEY);
+    myName = null;
+    myXu = 0;
+    messagesRef.off();
+    messagesDiv.innerHTML = '';
+    chatScreen.style.display = 'none';
+    loginScreen.style.display = 'flex';
+    usernameInput.value = '';
+    passwordInput.value = '';
+    loginMsg.textContent = '';
+  }
+
+  function formatTime(ts){
+    const d = new Date(ts);
+    return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+  }
+
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function listenMessages(){
+    messagesDiv.innerHTML = '';
+    messagesRef.limitToLast(100).on('child_added', (snap) => {
+      const m = snap.val();
+      renderMessage(m);
+      scrollToBottom();
     });
-  }).catch(()=>{
-    toast('Không thể gửi lời mời, thử lại sau.');
-    profileKbBtnEl.disabled = false;
-  });
-}
-window.__sendKbRequest = sendKbRequest;
+  }
 
-function openOtherProfileModal(senderKey){
-  if(!senderKey) return;
-
-  if(senderKey === myChatName()){
-    const avatarEl = document.getElementById('profileAvatar');
-    const isImgAvatar = state.avatar && /^(https?:|data:)/.test(state.avatar);
-    if(isImgAvatar){
-      avatarEl.innerHTML = `<img src="${escapeHtml(state.avatar)}" alt="">`;
+  function renderMessage(m){
+    const div = document.createElement('div');
+    if(m.type === 'system'){
+      div.className = 'msg system';
+      div.textContent = m.text;
     } else {
-      avatarEl.textContent = state.avatar || '👤';
+      const isMine = m.sender === myName;
+      const isBot = m.sender === BOT_NAME;
+      div.className = 'msg ' + (isMine ? 'mine' : (isBot ? 'bot' : 'theirs'));
+      div.innerHTML =
+        '<div class="name">' + escapeHtml(m.sender) + '</div>' +
+        '<div class="text">' + escapeHtml(m.text).replace(/\n/g, '<br>') + '</div>' +
+        '<div class="time">' + formatTime(m.time) + '</div>';
     }
-    document.getElementById('profileNickname').textContent =
-      currentUser ? (state.nickname || currentUser.uid) : ('🎣 Khách #' + state.playerId);
-    currentProfileTargetUid = null;
-    updateKbBtnVisibility();
-    profileOverlayEl.style.display = 'flex';
-    if(currentUser){
-      fetchChatProfile(currentUser.uid).then(p=>{
-        if(!p) return;
-        if(p.avatar) avatarEl.innerHTML = `<img src="${escapeHtml(p.avatar)}" alt="">`;
-        if(p.displayName) document.getElementById('profileNickname').textContent = p.displayName;
+    messagesDiv.appendChild(div);
+  }
+
+  function scrollToBottom(){
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }
+
+  async function sendMessage(){
+    const text = msgInput.value.trim();
+    if(!text || !myName) return;
+
+    // Command /botnt
+    if (text.toLowerCase() === '/botnt' || text.toLowerCase() === '/botnt ') {
+      msgInput.value = '';
+      // Also push the command as user message so others see
+      messagesRef.push({
+        type: 'chat',
+        sender: myName,
+        text: text,
+        time: Date.now()
       });
+      startBotGame();
+      return;
     }
-    return;
-  }
 
-  const avatarEl = document.getElementById('profileAvatar');
-  const nicknameEl = document.getElementById('profileNickname');
-  avatarEl.textContent = '👤';
-  nicknameEl.textContent = 'Đang tải...';
-  profileOverlayEl.style.display = 'flex';
-
-  const isGuest = senderKey.indexOf('Khách#') === 0;
-  currentProfileTargetUid = (currentUser && !isGuest) ? senderKey : null;
-  updateKbBtnVisibility();
-
-  fetchChatProfile(senderKey).then(p=>{
-    p = p || {};
-    if(p.avatar){
-      avatarEl.innerHTML = `<img src="${escapeHtml(p.avatar)}" alt="">`;
-    } else if(p.avatarEmoji){
-      avatarEl.textContent = p.avatarEmoji;
-    } else {
-      avatarEl.textContent = '👤';
+    // If in game, try to treat as answer first
+    if (game) {
+      const handled = await handlePlayerWord(text);
+      if (handled) {
+        // Still post the user's word so chat history is complete
+        messagesRef.push({
+          type: 'chat',
+          sender: myName,
+          text: text,
+          time: Date.now()
+        });
+        msgInput.value = '';
+        return;
+      }
     }
-    nicknameEl.textContent = p.displayName || senderKey;
+
+    // Normal message
+    messagesRef.push({
+      type: 'chat',
+      sender: myName,
+      text: text,
+      time: Date.now()
+    });
+    msgInput.value = '';
+  }
+
+  // Events
+  loginBtn.addEventListener('click', login);
+  registerBtn.addEventListener('click', register);
+  logoutBtn.addEventListener('click', logout);
+  sendBtn.addEventListener('click', sendMessage);
+  msgInput.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter') sendMessage();
   });
-}
-
-document.getElementById('profileCloseBtn').addEventListener('click', ()=>{
-  profileOverlayEl.style.display = 'none';
-});
-profileOverlayEl.addEventListener('click', (e)=>{
-  if(e.target === profileOverlayEl) profileOverlayEl.style.display = 'none';
-});
-
-/* ============== BOT NỐI TỪ ============== */
-const NOITU_ROUND_MS = 30000;
-const NOITU_REVEAL_DELAY_MS = 5000;
-const NOITU_MIN_PLAYERS = 3;
-
-/* Từ điển nối từ – rút gọn từ file gốc (có thể mở rộng thêm) */
-const NOITU_WORDS = [
-  "an toàn","an ninh","an vui","ba ba","ba má","ba mẹ","ba ngày","ba tháng","ba tuổi",
-  "bác sĩ","bác học","bác ái","bài học","bài hát","bài thơ","bài toán","bàn tay","bàn chân",
-  "bạn bè","bạn thân","bạn học","bạn trai","bạn gái","bão táp","bão tố","bão giông",
-  "bếp núc","bếp lửa","biển cả","biển xanh","biển khơi","bình an","bình yên","bình minh",
-  "bóng đá","bóng chuyền","bóng rổ","bóng bàn","bướm đêm","bướm trắng","ca hát","ca sĩ",
-  "cây cối","cây xanh","cây cao","chăm chỉ","chăm sóc","cháu chắt","cháu nội","cháu ngoại",
-  "chéo buộc","chim chóc","chim sẻ","chim én","chim sâu","chợ búa","chợ phiên","chợ quê",
-  "chú ý","chú rể","chú bác","chúc mừng","chúc phúc","chung sức","chung tay","chung sống",
-  "cô giáo","cô dâu","cô bác","cô chú","công việc","công việc","công ty","công viên",
-  "cua biển","cua đồng","cua gạch","cúi đầu","cúi chào","cười nói","cười đùa","cười lớn",
-  "da dẻ","da thịt","danh dự","danh tiếng","danh sách","dễ dàng","dễ chịu","dễ thương",
-  "điện thoại","điện lực","điện năng","điện ảnh","đường phố","đường sá","đường dài",
-  "đất nước","đất đai","đất cát","đất đỏ","đồng bào","đồng chí","đồng hương","đồng nghiệp",
-  "đồng tiền","đồng xu","gia đình","gia đình","gia tộc","gia đình","giáo dục","giáo viên",
-  "gió mùa","gió bão","gió lạnh","gió mát","hoa hồng","hoa sen","hoa mai","hoa đào",
-  "học hành","học hỏi","học sinh","học tập","học trò","hạnh phúc","hạnh phúc","hạnh phúc",
-  "hạnh phúc","hạnh phúc","hạnh phúc","hạnh phúc","hạnh phúc","hạnh phúc","hạnh phúc",
-  "kết bạn","kết nối","kết thúc","kết quả","kết hôn","lá thư","lá cờ","lá xanh",
-  "làm việc","làm ăn","làm giàu","làm người","lòng tốt","lòng tin","lòng nhân","lòng yêu",
-  "mẹ cha","mẹ hiền","mẹ yêu","mẹ chồng","mẹ vợ","mưa bão","mưa rào","mưa phùn",
-  "mưa to","nắng mưa","nắng nóng","nắng sớm","nắng vàng","ngôi nhà","ngôi sao","ngôi trường",
-  "người thân","người bạn","người yêu","người lớn","nhà cửa","nhà ở","nhà cửa","nhà trường",
-  "nước uống","nước sạch","nước ngọt","nước biển","nước mắt","ô tô","ô dù","ô cửa",
-  "phố phường","phố xá","phố cổ","quê hương","quê nhà","quê quán","quê xa","rừng núi",
-  "rừng xanh","rừng sâu","sông nước","sông hồ","sông biển","sông cái","sách vở","sách giáo",
-  "sức khỏe","sức mạnh","sức sống","sức lực","thanh niên","thanh bình","thanh tao",
-  "thành công","thành phố","thành thị","thành quả","thời gian","thời tiết","thời đại",
-  "thời trang","tiền bạc","tiền của","tiền lương","tiền tệ","tình bạn","tình yêu","tình cảm",
-  "tình người","trái đất","trái tim","trái cây","trái ngọt","trường học","trường lớp",
-  "trường đời","vui vẻ","vui mừng","vui chơi","vui sống","xe cộ","xe máy","xe hơi",
-  "xe đạp","xã hội","xã viên","xã thôn","yêu thương","yêu quý","yêu mến","yêu đời",
-  "ăn uống","ăn chơi","ăn ngủ","ăn học","ấm áp","ấm no","ấm cúng","ấm êm",
-  "ước mơ","ước muốn","ước ao","ước vọng","đẹp đẽ","đẹp mắt","đẹp người","đẹp trai",
-  "đông đúc","đông vui","đông đủ","đông đảo","đồng bằng","đồng ruộng","đồng cỏ","đồng lúa"
-];
-const NOITU_WORD_SET = new Set(NOITU_WORDS.map(w => w.trim().toLowerCase().replace(/\s+/g," ")));
-
-function noituLastSyllable(word){
-  const p = word.trim().split(" ");
-  return p[p.length-1];
-}
-function noituNormalize(str){
-  return String(str||"").trim().toLowerCase().replace(/\s+/g, " ");
-}
-function pickNoituWord(){
-  return NOITU_WORDS[Math.floor(Math.random()*NOITU_WORDS.length)];
-}
-
-const noituGameRef = db.ref("wordChainGame");
-let noituState = null;
-let noituScheduledRoundId = null;
-let noituScheduledRevealId = null;
-let noituEnabled = true;
-
-db.ref("noituConfig/enabled").on("value", (snap)=>{
-  const v = snap.val();
-  noituEnabled = (v !== false);
-}, ()=>{});
-
-function noituDisplayName(uidKey){
-  return fetchChatProfile(uidKey).then(p => (p && p.displayName) ? p.displayName : uidKey);
-}
-
-function postNoituSysMsg(text, extra){
-  db.ref("chats/" + WORLD_CHAT_ROOM).push(Object.assign({ sys:true, t:text, ts:Date.now() }, extra||{})).catch(()=>{});
-}
-
-function scheduleNoituExpiry(roundId, deadline){
-  const wait = Math.max(0, (deadline||0) - Date.now() + 400);
-  setTimeout(()=>{ tryExpireNoituRound(roundId); }, wait);
-}
-
-function tryExpireNoituRound(roundId){
-  noituGameRef.transaction(cur=>{
-    if(!cur || !cur.active || cur.roundId !== roundId) return;
-    return Object.assign({}, cur, { active:false });
-  }, (err, committed, snap)=>{
-    if(err || !committed) return;
-    const val = snap.val();
-    if(val) postNoituSysMsg(`⏰ Hết giờ rồi! Không ai nối được từ "${val.word}". Gõ /botnoitu để mở ván mới nhé!`, {noitu:true});
+  passwordInput.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter') login();
   });
-}
 
-noituGameRef.on("value", (snap)=>{
-  const val = snap.val();
-  noituState = val;
-  updateNoituChatLock();
-  if(val && val.pending && val.revealAt && noituScheduledRevealId !== val.roundId){
-    noituScheduledRevealId = val.roundId;
-    scheduleNoituReveal(val.roundId, val.revealAt);
-  }
-  if(val && val.active && val.deadline && noituScheduledRoundId !== val.roundId){
-    noituScheduledRoundId = val.roundId;
-    scheduleNoituExpiry(val.roundId, val.deadline);
-  }
-}, ()=>{});
-
-function updateNoituChatLock(){
-  const locked = !!(noituState && noituState.pending);
-  if(worldChatInput){
-    worldChatInput.disabled = locked;
-    worldChatInput.placeholder = locked ? 'Bot đang nghĩ từ... chờ chút nhé!' : 'Nhắn gì đó cho mọi người...';
-  }
-  if(worldChatSendBtn) worldChatSendBtn.disabled = locked;
-}
-
-function handleNoituCommand(raw){
-  if(noituNormalize(raw) !== "/botnoitu") return false;
-  if(!noituEnabled){
-    postNoituSysMsg("🤖 Bot Nối từ hiện đã hết tiền, không thể mở ván mới. Hẹn mọi người dịp khác nhé!", {noitu:true});
-    return true;
-  }
-  startNoituRound();
-  return true;
-}
-
-function startNoituRound(){
-  noituGameRef.transaction(cur=>{
-    if(cur && (cur.active || cur.pending || cur.waiting)) return;
-    const word = pickNoituWord();
-    const now = Date.now();
-    return {
-      active:false,
-      pending:false,
-      waiting:true,
-      solved:false,
-      word: word,
-      lastSyllable: noituLastSyllable(word),
-      chatters: {},
-      calledAt: now,
-      roundId: (cur && cur.roundId ? cur.roundId : 0) + 1,
-      startedBy: myChatName()
-    };
-  }, (err, committed, snap)=>{
-    if(err){ toast("Có lỗi xảy ra, thử lại nhé!"); return; }
-    if(!committed){ toast("⏳ Đang có 1 từ chưa ai nối được, đợi ván này xong đã nhé!"); return; }
-    const val = snap.val();
-    if(!val) return;
-    postNoituSysMsg(`🤖 Bot Nối từ đã sẵn sàng! Cần thêm ít nhất ${NOITU_MIN_PLAYERS} người chat trong chat chung thì bot mới đưa từ ra nhé.`, {noitu:true});
-  });
-}
-
-function noteNoituChatter(sender){
-  const cur = noituState;
-  if(!cur || !cur.waiting || cur.pending || cur.active) return;
-  if(cur.chatters && cur.chatters[sender]) return;
-  const roundId = cur.roundId;
-  noituGameRef.transaction(c=>{
-    if(!c || !c.waiting || c.pending || c.active || c.roundId !== roundId) return;
-    const chatters = Object.assign({}, c.chatters || {});
-    chatters[sender] = true;
-    const enough = Object.keys(chatters).length >= NOITU_MIN_PLAYERS;
-    if(enough){
-      const now = Date.now();
-      return Object.assign({}, c, { chatters:chatters, waiting:false, pending:true, revealAt: now + NOITU_REVEAL_DELAY_MS });
-    }
-    return Object.assign({}, c, { chatters:chatters });
-  }, (err, committed, snap)=>{
-    if(err || !committed) return;
-    const val = snap.val();
-    if(val && val.pending && noituScheduledRevealId !== val.roundId){
-      postNoituSysMsg("🤖 Đã đủ người rồi! Bot đang nghĩ từ... hiện ra sau 5 giây nữa nhé! ⏳", {noitu:true});
-      noituScheduledRevealId = val.roundId;
-      scheduleNoituReveal(val.roundId, val.revealAt);
+  // Auto login
+  window.addEventListener('DOMContentLoaded', async () => {
+    const saved = localStorage.getItem(LS_KEY);
+    if(saved){
+      const key = toKey(saved);
+      try{
+        const snap = await usersRef.child(key).get();
+        if(snap.exists()){
+          const data = snap.val();
+          myName = data.displayName;
+          myXu = data.xu || 0;
+          enterChat();
+        } else {
+          localStorage.removeItem(LS_KEY);
+        }
+      }catch(e){
+        console.error(e);
+      }
     }
   });
-}
-
-function scheduleNoituReveal(roundId, revealAt){
-  const wait = Math.max(0, (revealAt||0) - Date.now() + 200);
-  setTimeout(()=>{ tryRevealNoituRound(roundId); }, wait);
-}
-
-function tryRevealNoituRound(roundId){
-  noituGameRef.transaction(cur=>{
-    if(!cur || !cur.pending || cur.active || cur.roundId !== roundId) return;
-    const now = Date.now();
-    return Object.assign({}, cur, { pending:false, active:true, startedAt: now, deadline: now + NOITU_ROUND_MS });
-  }, (err, committed, snap)=>{
-    if(err || !committed) return;
-    const val = snap.val();
-    if(!val) return;
-    postNoituSysMsg(`🤖 BOT NỐI TỪ: "${val.word}" — ai nối được từ bắt đầu bằng "${val.lastSyllable}" nhanh nhất trong 30 giây!`, {noitu:true});
-    scheduleNoituExpiry(val.roundId, val.deadline);
-  });
-}
-
-function handleNoituAnswer(raw){
-  const cur = noituState;
-  if(!noituEnabled) return false;
-  if(!cur || !cur.active) return false;
-  const parts = raw.trim().split(/\s+/);
-  if(parts.length !== 2) return false;
-  if(parts[0].toLowerCase() !== cur.lastSyllable) return false;
-  const answer = noituNormalize(raw);
-  if(!NOITU_WORD_SET.has(answer)) return false;
-
-  const roundId = cur.roundId;
-  const me = myChatName();
-  noituGameRef.transaction(c=>{
-    if(!c || !c.active || c.solved || c.roundId !== roundId) return;
-    return Object.assign({}, c, { active:false, solved:true, winner:me, answer:answer });
-  }, (err, committed, snap)=>{
-    if(err) return;
-    if(committed && snap.val() && snap.val().winner === me){
-      toast("🎉 Bạn nối đúng!");
-      noituDisplayName(me).then(name=>{
-        postNoituSysMsg(`🏆 ${name} đã nối đúng "${answer}"! Gõ /botnoitu để chơi ván tiếp theo nhé!`, {noituWin:true});
-      });
-    } else {
-      toast("😅 Bạn nối đúng nhưng chậm chân rồi, đợi ván sau nhé!");
-    }
-  });
-  return true;
-}
-
-/* ============== BOT VUA TIẾNG VIỆT ============== */
-const VTV_ROUND_MS = 30000;
-
-function vtvNormalize(str){
-  return String(str||"").trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-function vtvShuffleArray(arr){
-  const a = arr.slice();
-  for(let i = a.length - 1; i > 0; i--){
-    const j = Math.floor(Math.random() * (i + 1));
-    const tmp = a[i]; a[i] = a[j]; a[j] = tmp;
-  }
-  return a;
-}
-
-function vtvScrambleWord(word){
-  const syllables = word.trim().split(" ");
-  const scrambleSyllable = (s)=>{
-    const chars = vtvShuffleArray(s.split(""));
-    return chars.join("");
-  };
-  let attempt = 0;
-  let result;
-  do{
-    const scrambledSyllables = syllables.map(scrambleSyllable);
-    const ordered = syllables.length > 1 ? vtvShuffleArray(scrambledSyllables) : scrambledSyllables;
-    result = ordered.join(" ");
-    attempt++;
-  } while(result.toLowerCase() === word.toLowerCase() && attempt < 8);
-  return result;
-}
-
-function vtvFormatScrambled(scrambled){
-  return scrambled.split(" ").map(syl => syl.split("").join("/")).join("   ");
-}
-
-function pickVtvWord(){
-  return NOITU_WORDS[Math.floor(Math.random()*NOITU_WORDS.length)];
-}
-
-const vtvGameRef = db.ref("vtvGame");
-let vtvState = null;
-let vtvScheduledRoundId = null;
-let vtvEnabled = true;
-
-db.ref("vtvConfig/enabled").on("value", (snap)=>{
-  const v = snap.val();
-  vtvEnabled = (v !== false);
-}, ()=>{});
-
-function vtvDisplayName(uidKey){
-  return fetchChatProfile(uidKey).then(p => (p && p.displayName) ? p.displayName : uidKey);
-}
-
-function postVtvSysMsg(text, extra){
-  db.ref("chats/" + WORLD_CHAT_ROOM).push(Object.assign({ sys:true, t:text, ts:Date.now() }, extra||{})).catch(()=>{});
-}
-
-function scheduleVtvExpiry(roundId, deadline){
-  const wait = Math.max(0, (deadline||0) - Date.now() + 400);
-  setTimeout(()=>{ tryExpireVtvRound(roundId); }, wait);
-}
-
-function tryExpireVtvRound(roundId){
-  vtvGameRef.transaction(cur=>{
-    if(!cur || !cur.active || cur.roundId !== roundId) return;
-    return Object.assign({}, cur, { active:false });
-  }, (err, committed, snap)=>{
-    if(err || !committed) return;
-    const val = snap.val();
-    if(val) postVtvSysMsg(`⏰ Hết giờ rồi! Chưa ai đoán đúng từ "${val.word}" (đã xáo: "${val.scrambled}"). Gõ /botvtv để chơi câu mới nhé!`, {vtv:true});
-  });
-}
-
-vtvGameRef.on("value", (snap)=>{
-  const val = snap.val();
-  vtvState = val;
-  if(val && val.active && val.deadline && vtvScheduledRoundId !== val.roundId){
-    vtvScheduledRoundId = val.roundId;
-    scheduleVtvExpiry(val.roundId, val.deadline);
-  }
-}, ()=>{});
-
-function handleVtvCommand(raw){
-  if(vtvNormalize(raw) !== "/botvtv") return false;
-  if(!vtvEnabled){
-    postVtvSysMsg("🤖 Bot Vua Tiếng Việt hiện đã hết tiền, không thể mở câu mới. Hẹn mọi người dịp khác nhé!", {vtv:true});
-    return true;
-  }
-  startVtvRound();
-  return true;
-}
-
-function startVtvRound(){
-  vtvGameRef.transaction(cur=>{
-    if(cur && cur.active) return;
-    const word = pickVtvWord();
-    const scrambled = vtvScrambleWord(word);
-    const now = Date.now();
-    return {
-      active:true,
-      solved:false,
-      word: word,
-      scrambled: scrambled,
-      startedAt: now,
-      deadline: now + VTV_ROUND_MS,
-      roundId: (cur && cur.roundId ? cur.roundId : 0) + 1,
-      startedBy: myChatName()
-    };
-  }, (err, committed, snap)=>{
-    if(err){ toast("Có lỗi xảy ra, thử lại nhé!"); return; }
-    if(!committed){ toast("⏳ Đang có 1 câu chưa ai đoán được, đợi câu này xong đã nhé!"); return; }
-    const val = snap.val();
-    if(!val) return;
-    postVtvSysMsg(`🤖 BOT VUA TIẾNG VIỆT\n${vtvFormatScrambled(val.scrambled)}`, {vtv:true});
-    scheduleVtvExpiry(val.roundId, val.deadline);
-  });
-}
-
-function handleVtvAnswer(raw){
-  const cur = vtvState;
-  if(!vtvEnabled) return false;
-  if(!cur || !cur.active) return false;
-  const answer = vtvNormalize(raw);
-  if(answer !== vtvNormalize(cur.word)) return false;
-
-  const roundId = cur.roundId;
-  const me = myChatName();
-  vtvGameRef.transaction(c=>{
-    if(!c || !c.active || c.solved || c.roundId !== roundId) return;
-    return Object.assign({}, c, { active:false, solved:true, winner:me });
-  }, (err, committed, snap)=>{
-    if(err) return;
-    if(committed && snap.val() && snap.val().winner === me){
-      toast("🎉 Bạn đoán đúng!");
-      vtvDisplayName(me).then(name=>{
-        postVtvSysMsg(`🏆 ${name} đã đoán đúng "${cur.word}"! Gõ /botvtv để chơi câu tiếp theo nhé!`, {vtvWin:true});
-      });
-    }
-  });
-  return true;
-}
-
-})();
-
-function goBack(){
-  window.location.href = '/chat';
-}
 </script>
 </body>
 </html>
