@@ -292,8 +292,7 @@
     </div>
 
     <div class="btnRow">
-      <button class="btnGhost" id="registerBtn">Đăng ký</button>
-      <button class="btnPrimary" id="loginBtn">Đăng nhập</button>
+      <button class="btnPrimary" id="loginBtn" style="flex:1;">Đăng nhập</button>
     </div>
     <div id="loginMsg"></div>
   </div>
@@ -371,7 +370,7 @@
     return name.trim().toLowerCase().replace(/[.#$\[\]\/]/g, '_');
   }
 
-  async function register(){
+  async function login(){
     const name = usernameInput.value.trim();
     const pass = passwordInput.value;
     if(!name || !pass){ showMsg('Vui lòng nhập đầy đủ tên và mật khẩu'); return; }
@@ -382,36 +381,14 @@
     const key = toKey(name);
     try{
       const snap = await usersRef.child(key).get();
-      if(snap.exists()){
-        showMsg('Tên đăng nhập đã tồn tại, vui lòng đăng nhập');
-        setLoading(false);
-        return;
-      }
-      await usersRef.child(key).set({
-        displayName: name,
-        password: pass,
-        createdAt: Date.now()
-      });
-      showMsg('Đăng ký thành công! Đang đăng nhập...', false);
-      loginSuccess(name);
-    }catch(e){
-      showMsg('Lỗi: ' + e.message);
-      setLoading(false);
-    }
-  }
-
-  async function login(){
-    const name = usernameInput.value.trim();
-    const pass = passwordInput.value;
-    if(!name || !pass){ showMsg('Vui lòng nhập đầy đủ tên và mật khẩu'); return; }
-
-    setLoading(true);
-    const key = toKey(name);
-    try{
-      const snap = await usersRef.child(key).get();
       if(!snap.exists()){
-        showMsg('Tài khoản chưa tồn tại, hãy bấm Đăng ký');
-        setLoading(false);
+        // Chưa có tài khoản -> tự tạo mới
+        await usersRef.child(key).set({
+          displayName: name,
+          password: pass,
+          createdAt: Date.now()
+        });
+        loginSuccess(name);
         return;
       }
       const data = snap.val();
@@ -518,7 +495,6 @@
 
   // Events
   loginBtn.addEventListener('click', login);
-  registerBtn.addEventListener('click', register);
   logoutBtn.addEventListener('click', logout);
   sendBtn.addEventListener('click', sendMessage);
   msgInput.addEventListener('keydown', (e) => {
