@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Chat</title>
+<title>Chat Chung</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
@@ -339,7 +339,6 @@
   const chatScreen = document.getElementById('chatScreen');
   const usernameInput = document.getElementById('username');
   const loginBtn = document.getElementById('loginBtn');
-  const registerBtn = document.getElementById('registerBtn');
   const loginMsg = document.getElementById('loginMsg');
   const currentUserName = document.getElementById('currentUserName');
   const messagesDiv = document.getElementById('messages');
@@ -357,7 +356,6 @@
 
   function setLoading(loading){
     loginBtn.disabled = loading;
-    registerBtn.disabled = loading;
   }
 
   // Sanitize key cho Firebase (không cho phép . # $ [ ] /)
