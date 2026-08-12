@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Chat Chung</title>
+<title>Chat </title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
@@ -444,12 +444,10 @@
     chatScreen.style.display = 'flex';
     currentUserName.textContent = myName;
     listenMessages();
-    postSystemMessage(myName + ' đã tham gia phòng chat');
   }
 
   function logout(){
     localStorage.removeItem(LS_KEY);
-    if(myName) postSystemMessage(myName + ' đã rời phòng chat');
     myName = null;
     messagesRef.off();
     messagesDiv.innerHTML = '';
@@ -553,11 +551,6 @@
     }
   });
 
-  window.addEventListener('beforeunload', () => {
-    if(myName){
-      navigator.sendBeacon && postSystemMessage(myName + ' đã rời phòng chat');
-    }
-  });
 </script>
 </body>
 </html>
