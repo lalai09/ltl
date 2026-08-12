@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Chat Chung</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+  :root{
+    --bg-deep:#1288c9;
+    --bg-mid:#29b6f6;
+    --bg-light:#5cd0ff;
+    --gold:#ffcd3c;
+    --gold-dark:#e0a900;
+    --panel:#ffffff;
+    --text:#111318;
+    --text-dim:#4a6274;
+    --ink:#111111;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none;}
+  html,body{
+    margin:0; padding:0; height:100%; width:100%;
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    background:linear-gradient(180deg,#4fc3f7 0%, #29b6f6 55%, #1288c9 100%);
+    color:var(--text);
+    overflow:hidden;
+    touch-action:manipulation;
+  }
+  #app{
+    position:relative; width:100%; height:100%; max-width:520px; margin:0 auto;
+    display:flex; flex-direction:column; overflow:hidden;
+    box-shadow:0 0 40px rgba(0,0,0,.5);
+  }
+  @media (min-width:701px){
+    #app{ max-width:900px; border-radius:0; box-shadow:none; }
+  }
+
+  /* HEADER */
+  #header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 12px; background:#29b6f6;
+    border-bottom:4px solid var(--ink); z-index:20; flex-shrink:0;
+  }
+  #wcBrand{display:flex; align-items:center; gap:8px; flex:1;}
+  #wcChatIcon{
+    width:34px; height:34px; border-radius:50% 50% 50% 4px; background:#fff; color:#111;
+    display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0;
+    box-shadow:0 2px 0 rgba(0,0,0,.25);
+  }
+  #wcChatIcon svg{width:19px; height:19px; display:block;}
+  #wcChatText{
+    font-weight:900; font-size:20px; color:#111; letter-spacing:.3px;
+    font-family:'Baloo 2','Comic Sans MS',system-ui,sans-serif; text-transform:lowercase;
+  }
+  #btnGoArena{
+    background:#ffcd3c; color:#1a1200; font-weight:900; font-size:14px;
+    border:3px solid #111; border-radius:16px; padding:9px 16px;
+    box-shadow:0 3px 0 #a5720a; cursor:pointer; flex-shrink:0; white-space:nowrap;
+  }
+  #btnGoArena:active{transform:translateY(2px); box-shadow:0 1px 0 #a5720a;}
+  .back-btn{
+    border:2px solid var(--ink); background:#fff; color:var(--text);
+    font-size:17px; cursor:pointer; width:34px; height:34px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-right:8px;
+  }
+  .back-btn:active{transform:scale(0.9);}
+
+  /* CHAT AREA */
+  #chatMessages{
+    flex:1; overflow-y:auto; padding:10px 12px;
+    display:flex; flex-direction:column; gap:10px; background:#29b6f6;
+  }
+  .msg{display:flex; gap:8px; align-items:flex-start; max-width:85%;}
+  .msg .av{
+    font-size:20px; flex-shrink:0; width:38px; height:38px; border-radius:50%;
+    overflow:hidden; display:flex; align-items:center; justify-content:center;
+    background:#fff; border:3px solid #111; cursor:pointer;
+  }
+  .msg .av img{width:100%; height:100%; object-fit:cover; border-radius:50%; display:block;}
+  .msg .bubble2{
+    background:#fff; color:#111; border:3px solid #111;
+    border-radius:16px 16px 16px 4px; padding:9px 13px;
+    font-size:13.5px; font-weight:600; word-break:break-word; overflow-wrap:anywhere;
+  }
+  .msg .name{
+    font-size:11.5px; color:#fff; font-weight:800; margin-bottom:3px;
+    text-shadow:0 1px 2px rgba(0,0,0,.4); cursor:pointer;
+  }
+  .msg .msgTime{
+    font-size:10px; color:#fff; opacity:.8; margin-top:2px;
+    text-shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+  .msg.me .msgTime{text-align:right;}
+  .msg.me .name{text-align:right;}
+  .msg.me{align-self:flex-end; flex-direction:row-reverse;}
+  .msg.me .bubble2{
+    background:#ffcd3c; color:#1a1200; border:3px solid #111;
+    border-radius:16px 16px 4px 16px;
+  }
+  .msg.sys{align-self:center; max-width:95%;}
+  .msg.sys .bubble2{
+    background:#fff8e1; border:2px solid var(--gold-dark); color:#7a5600;
+    font-weight:700; text-align:center; font-size:12.5px;
+  }
+  .msg.sys.noitu .bubble2{background:#e7f6ff; border:2px solid #1288c9; color:#0b4f75;}
+  .msg.sys.noituWin .bubble2{background:#fff3cf; border:2px solid var(--gold-dark); color:#7a5600;}
+  .msg.sys.vtv .bubble2{background:#f3e8ff; border:2px solid #8b3fd1; color:#4a1a7a;}
+  .msg.sys.vtvWin .bubble2{background:#fff3cf; border:2px solid var(--gold-dark); color:#7a5600;}
+
+  .roomInviteCard{
+    background:#fff; border:3px solid var(--ink); border-radius:14px; padding:10px 12px; min-width:190px;
+  }
+  .roomInviteCard .ricTitle{font-size:12.5px; font-weight:800; color:var(--gold-dark); display:flex; align-items:center; gap:6px;}
+  .roomInviteCard .ricBet{font-size:12px; color:var(--text-dim); margin:4px 0 8px;}
+  .roomInviteCard .ricJoinBtn{
+    width:100%; border:3px solid var(--ink); border-radius:10px; padding:8px; font-weight:800; font-size:12.5px;
+    background:linear-gradient(180deg,#ffe08a,var(--gold-dark)); color:#3a2400;
+  }
+  .roomInviteCard .ricJoinBtn:disabled{opacity:.5;}
+
+  #chatInputBar{
+    display:flex; gap:8px; padding:10px 12px 12px;
+    border-top:5px solid #000; background:#29b6f6; flex-shrink:0;
+  }
+  #chatInputBar input{
+    flex:1; background:#fff; border:3px solid #111; border-radius:20px;
+    padding:10px 16px; color:#111; font-size:14px; font-weight:600; outline:none;
+  }
+  #chatInputBar input::placeholder{color:#888;}
+  #chatInputBar input:disabled{background:#eee; color:#999; cursor:not-allowed;}
+  #chatInputBar button:disabled{opacity:.5; cursor:not-allowed;}
+  #chatInputBar button{
+    background:#ffcd3c; color:#1a1200; border:3px solid #111; border-radius:50%;
+    width:44px; height:44px; font-size:18px; flex-shrink:0;
+    box-shadow:0 3px 0 #a5720a; cursor:pointer;
+  }
+  #chatInputBar button:active{transform:translateY(2px); box-shadow:0 1px 0 #a5720a;}
+
+  /* TOAST */
+  #toastWrap{
+    position:absolute; top:56px; left:50%; transform:translateX(-50%);
+    z-index:200; display:flex; flex-direction:column; gap:6px; align-items:center; pointer-events:none;
+  }
+  .toast{
+    background:#fff; border:2px solid var(--ink); color:#111;
+    padding:8px 16px; border-radius:20px; font-size:13px; font-weight:700;
+    animation:toastIn .3s;
+  }
+  @keyframes toastIn{ from{opacity:0; transform:translateY(-10px);} to{opacity:1; transform:translateY(0);} }
+
+  /* PROFILE MODAL */
+  #profileOverlay{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,.5);
+    z-index:999; align-items:center; justify-content:center;
+  }
+  #profileCard{
+    background:var(--panel); border:3px solid var(--ink); border-radius:18px;
+    padding:16px; width:min(320px,86vw); position:relative;
+  }
+  .profileTopRow{display:flex; align-items:center; gap:10px; margin-bottom:12px;}
+  .profileAvatarCircle{
+    width:60px; height:60px; border-radius:50%; background:var(--gold); color:#3a2400;
+    border:3px solid var(--ink); flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    font-size:28px; overflow:hidden;
+  }
+  .profileAvatarCircle img{width:100%; height:100%; object-fit:cover; display:block;}
+  .profileNameBox{
+    flex:1; min-width:0; background:var(--panel); border:3px solid var(--ink); border-radius:14px;
+    padding:12px 10px; font-weight:800; font-size:14.5px; color:var(--text); text-align:center;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  #profileKbBtn{
+    display:none; width:100%; margin-top:12px; padding:11px 10px; border-radius:12px;
+    border:3px solid var(--ink); background:linear-gradient(180deg,#7fe0a0,#3fbf6d); color:#083a1c;
+    font-weight:900; font-size:14px; cursor:pointer; align-items:center; justify-content:center; gap:6px;
+  }
+  #profileKbBtn:active{ transform:translateY(1px); }
+  #profileKbBtn.sent{ background:linear-gradient(180deg,#dfe6ee,#c3cbd6); color:#3a4552; cursor:default; }
+
+  ::-webkit-scrollbar{width:5px;}
+  ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.2); border-radius:10px;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <div id="header">
+    <div style="display:flex; align-items:center;">
+      <button class="back-btn" onclick="goBack()">←</button>
+      <span id="wcBrand">
+        <span id="wcChatIcon">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 3C6.48 3 2 6.58 2 11c0 2.36 1.28 4.48 3.3 5.94-.1.98-.42 2.24-1.2 3.36-.15.22.03.51.3.47 1.86-.27 3.36-1 4.36-1.63A11.5 11.5 0 0 0 12 19c5.52 0 10-3.58 10-8s-4.48-8-10-8Z" fill="#111"/>
+            <circle cx="8" cy="11" r="1.3" fill="#fff"/>
+            <circle cx="12" cy="11" r="1.3" fill="#fff"/>
+            <circle cx="16" cy="11" r="1.3" fill="#fff"/>
+          </svg>
+        </span>
+        <span id="wcChatText">chat chung</span>
+      </span>
+    </div>
+    <button id="btnGoArena">Đấu trường</button>
+  </div>
+
+  <!-- CHAT MESSAGES -->
+  <div id="chatMessages"></div>
+
+  <!-- INPUT -->
+  <div id="chatInputBar">
+    <input type="text" id="worldChatInput" placeholder="Nhắn gì đó cho mọi người..." maxlength="300">
+    <button id="worldChatSendBtn">➤</button>
+  </div>
+
+  <div id="toastWrap"></div>
+
+  <!-- PROFILE MODAL -->
+  <div id="profileOverlay">
+    <div id="profileCard">
+      <button id="profileCloseBtn" style="position:absolute; top:8px; right:10px; border:none; background:none; font-size:20px; cursor:pointer;">✕</button>
+      <div class="profileTopRow">
+        <div class="profileAvatarCircle" id="profileAvatar">👤</div>
+        <div class="profileNameBox" id="profileNickname"></div>
+      </div>
+      <button id="profileKbBtn" onclick="window.__sendKbRequest && window.__sendKbRequest()">🤝 Kết bạn</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============== FIREBASE ============== */
+const firebaseConfig = {
+  apiKey: "AIzaSyDH_skpX3D9sD3zz3iiyrHnB28BIVvIMM0",
+  authDomain: "hihi-c6af6.firebaseapp.com",
+  databaseURL: "https://hihi-c6af6-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "hihi-c6af6",
+  storageBucket: "hihi-c6af6.firebasestorage.app",
+  messagingSenderId: "164013580789",
+  appId: "1:164013580789:web:94227e94c6d517170f40bc"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
+
+let currentUser = null;
+const SAVE_KEY = "fishingWorld_save_v1";
+
+function getLocalState(){
+  try{
+    const raw = localStorage.getItem(SAVE_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return { coins:100, playerId: Math.floor(1000+Math.random()*8999), nickname:"", avatar:"👤" };
+}
+let state = getLocalState();
+
+function saveLocalState(){
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }catch(e){}
+  if(currentUser){
+    db.ref('users/'+currentUser.uid+'/gameState').update({
+      coins: state.coins,
+      nickname: state.nickname,
+      avatar: state.avatar,
+      playerId: state.playerId
+    }).catch(()=>{});
+  }
+}
+
+/* Nhận diện user từ Firebase Auth (dùng chung với hệ thống Chat) */
+auth.onAuthStateChanged(user=>{
+  currentUser = user;
+  if(user){
+    db.ref('users/'+user.uid+'/gameState').once('value').then(snap=>{
+      const gs = snap.val();
+      if(gs){
+        if(typeof gs.coins === 'number') state.coins = gs.coins;
+        if(gs.nickname) state.nickname = gs.nickname;
+        if(gs.avatar) state.avatar = gs.avatar;
+        if(gs.playerId) state.playerId = gs.playerId;
+      }
+    }).catch(()=>{});
+  }
+});
+
+/* ============== HELPERS ============== */
+function toast(msg){
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(()=>{ if(el.parentNode) el.remove(); }, 2800);
+}
+
+function escapeHtml(str){
+  return String(str==null?'':str).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function myChatName(){
+  return currentUser ? currentUser.uid : ('Khách#' + state.playerId);
+}
+
+/* ============== PROFILE CACHE ============== */
+const chatProfileCache = {};
+function fetchChatProfile(uid){
+  if(chatProfileCache[uid]) return Promise.resolve(chatProfileCache[uid]);
+  return db.ref('user_profiles/' + uid).once('value').then(s=>{
+    const p = (s.exists() && s.val()) || {};
+    chatProfileCache[uid] = p;
+    return p;
+  }).catch(()=>({}));
+}
+
+/* ============== WORLD CHAT ============== */
+const WORLD_CHAT_ROOM = 'world_fishing';
+const chatMessagesEl = document.getElementById('chatMessages');
+const worldChatInput = document.getElementById('worldChatInput');
+const worldChatSendBtn = document.getElementById('worldChatSendBtn');
+
+let worldChatReady = false;
+
+function renderChatMsg(key, m){
+  if(!m || document.getElementById('cm_'+key)) return;
+  const row = document.createElement('div');
+  row.id = 'cm_'+key;
+
+  if(m.sys){
+    let extraClass = '';
+    if(m.noituWin) extraClass = ' noituWin';
+    else if(m.noitu) extraClass = ' noitu';
+    else if(m.vtvWin) extraClass = ' vtvWin';
+    else if(m.vtv) extraClass = ' vtv';
+    row.className = 'msg sys' + extraClass;
+    row.innerHTML = `<div class="bubble2">${escapeHtml(m.t)}</div>`;
+    chatMessagesEl.appendChild(row);
+  } else {
+    const me = m.s === myChatName();
+    row.className = 'msg' + (me ? ' me' : '');
+    const time = new Date(m.ts||Date.now()).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});
+    const cached = chatProfileCache[m.s];
+    const displayName = (cached && cached.displayName) ? cached.displayName : m.s;
+    const avatarHtml = (cached && cached.avatar) ? `<img src="${escapeHtml(cached.avatar)}" alt="">` : '👤';
+
+    let bubbleHtml;
+    if(m.type === 'room' && m.roomId){
+      const isOwnRoom = m.s === myChatName();
+      bubbleHtml = `
+        <div class="roomInviteCard" data-room-id="${escapeHtml(m.roomId)}">
+          <div class="ricTitle">⚔️ Phòng ${escapeHtml(m.roomId)}</div>
+          <div class="ricBet">Cược: ${(m.bet||0).toLocaleString('vi-VN')} 🪙 mỗi người</div>
+          <button class="ricJoinBtn" data-join-room="${escapeHtml(m.roomId)}" ${isOwnRoom?'disabled':''}>${isOwnRoom?'Phòng của bạn':'▶️ Vào chơi'}</button>
+        </div>`;
+    } else {
+      bubbleHtml = `<div class="bubble2">${escapeHtml(m.t)}</div>`;
+    }
+
+    row.innerHTML = `
+      <div class="av" data-uid="${escapeHtml(m.s)}">${avatarHtml}</div>
+      <div>
+        <div class="name" data-uid="${escapeHtml(m.s)}">${escapeHtml(displayName)}</div>
+        ${bubbleHtml}
+        <div class="msgTime">${time}</div>
+      </div>
+    `;
+    chatMessagesEl.appendChild(row);
+
+    const avElNode = row.querySelector('.av');
+    const nameElNode = row.querySelector('.name');
+    if(avElNode) avElNode.addEventListener('click', ()=> openOtherProfileModal(m.s));
+    if(nameElNode) nameElNode.addEventListener('click', ()=> openOtherProfileModal(m.s));
+
+    if(!cached){
+      fetchChatProfile(m.s).then(p=>{
+        if(!p) return;
+        if(p.avatar && avElNode){
+          avElNode.innerHTML = `<img src="${escapeHtml(p.avatar)}" alt="">`;
+        }
+        if(p.displayName && nameElNode){
+          nameElNode.textContent = p.displayName;
+        }
+      });
+    }
+  }
+
+  while(chatMessagesEl.childElementCount > 80){
+    chatMessagesEl.removeChild(chatMessagesEl.firstChild);
+  }
+  chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+}
+
+db.ref('chats/' + WORLD_CHAT_ROOM).limitToLast(60).on('child_added', (snap)=>{
+  renderChatMsg(snap.key, snap.val());
+});
+setTimeout(()=>{ worldChatReady = true; }, 1500);
+
+/* Join room từ thẻ mời */
+chatMessagesEl.addEventListener('click', (e)=>{
+  const btn = e.target.closest('[data-join-room]');
+  if(!btn || btn.disabled) return;
+  const roomId = btn.getAttribute('data-join-room');
+  if(!roomId) return;
+  window.location.href = 'dautruong/?join=' + encodeURIComponent(roomId);
+});
+
+function sendWorldChat(){
+  const val = worldChatInput.value.trim();
+  if(!val) return;
+  if(noituState && noituState.pending){
+    toast('⏳ Bot đang nghĩ từ, chờ 5 giây nữa nhé!');
+    return;
+  }
+  worldChatInput.value = '';
+  if(handleNoituCommand(val)) return;
+  if(handleNoituAnswer(val)) return;
+  if(handleVtvCommand(val)) return;
+  if(handleVtvAnswer(val)) return;
+  db.ref('chats/' + WORLD_CHAT_ROOM).push({ s: myChatName(), t: val, ts: Date.now() }).catch(()=>{
+    toast('Không gửi được tin nhắn, kiểm tra mạng!');
+  });
+  noteNoituChatter(myChatName());
+}
+
+worldChatSendBtn.addEventListener('click', sendWorldChat);
+worldChatInput.addEventListener('keydown', (e)=>{
+  if(e.key==='Enter'){ e.preventDefault(); sendWorldChat(); }
+});
+
+const btnGoArena = document.getElementById('btnGoArena');
+if(btnGoArena){
+  btnGoArena.addEventListener('click', ()=>{ window.location.href = 'dautruong'; });
+}
+
+/* ============== PROFILE MODAL ============== */
+const profileOverlayEl = document.getElementById('profileOverlay');
+const profileKbBtnEl = document.getElementById('profileKbBtn');
+let currentProfileTargetUid = null;
+let kbCheckToken = 0;
+
+function updateKbBtnVisibility(){
+  if(!profileKbBtnEl) return;
+  profileKbBtnEl.classList.remove('sent');
+  profileKbBtnEl.textContent = '🤝 Kết bạn';
+  profileKbBtnEl.disabled = false;
+  profileKbBtnEl.style.display = 'none';
+
+  const targetId = currentProfileTargetUid;
+  const myId = currentUser ? myChatName() : null;
+  if(!targetId || !myId || targetId === myId) return;
+
+  const myToken = ++kbCheckToken;
+  db.ref('friends/' + myId + '/' + targetId).once('value').then(snap=>{
+    if(myToken !== kbCheckToken) return;
+    if(snap.exists()) return;
+    db.ref('friend_requests/' + targetId + '/' + myId).once('value').then(snap2=>{
+      if(myToken !== kbCheckToken) return;
+      if(snap2.exists()) return;
+      profileKbBtnEl.style.display = 'flex';
+    });
+  }).catch(()=>{});
+}
+
+function sendKbRequest(){
+  const myId = myChatName();
+  const targetId = currentProfileTargetUid;
+  if(!currentUser || !targetId || targetId === myId) return;
+  profileKbBtnEl.disabled = true;
+  db.ref('friends/' + myId + '/' + targetId).once('value').then(snap=>{
+    if(snap.exists()){
+      toast('Hai bạn đã là bạn bè rồi! 🤝');
+      profileKbBtnEl.style.display = 'none';
+      return;
+    }
+    db.ref('friend_requests/' + targetId + '/' + myId).once('value').then(snap2=>{
+      if(snap2.exists()){
+        toast('Đã gửi lời mời kết bạn trước đó rồi!');
+        profileKbBtnEl.style.display = 'none';
+        return;
+      }
+      db.ref('friend_requests/' + myId + '/' + targetId).once('value').then(snap3=>{
+        if(snap3.exists()){
+          db.ref('friends/' + myId + '/' + targetId).set(true);
+          db.ref('friends/' + targetId + '/' + myId).set(true);
+          db.ref('friend_requests/' + myId + '/' + targetId).remove();
+          db.ref('friend_requests/' + targetId + '/' + myId).remove();
+          toast('Đã kết bạn thành công! 🤝');
+          profileKbBtnEl.style.display = 'none';
+        } else {
+          db.ref('friend_requests/' + targetId + '/' + myId).set({ from: myId, ts: Date.now() }).then(()=>{
+            toast('Đã gửi lời mời kết bạn! 🤝');
+            profileKbBtnEl.style.display = 'none';
+          });
+        }
+      }).finally(()=>{ profileKbBtnEl.disabled = false; });
+    });
+  }).catch(()=>{
+    toast('Không thể gửi lời mời, thử lại sau.');
+    profileKbBtnEl.disabled = false;
+  });
+}
+window.__sendKbRequest = sendKbRequest;
+
+function openOtherProfileModal(senderKey){
+  if(!senderKey) return;
+
+  if(senderKey === myChatName()){
+    const avatarEl = document.getElementById('profileAvatar');
+    const isImgAvatar = state.avatar && /^(https?:|data:)/.test(state.avatar);
+    if(isImgAvatar){
+      avatarEl.innerHTML = `<img src="${escapeHtml(state.avatar)}" alt="">`;
+    } else {
+      avatarEl.textContent = state.avatar || '👤';
+    }
+    document.getElementById('profileNickname').textContent =
+      currentUser ? (state.nickname || currentUser.uid) : ('🎣 Khách #' + state.playerId);
+    currentProfileTargetUid = null;
+    updateKbBtnVisibility();
+    profileOverlayEl.style.display = 'flex';
+    if(currentUser){
+      fetchChatProfile(currentUser.uid).then(p=>{
+        if(!p) return;
+        if(p.avatar) avatarEl.innerHTML = `<img src="${escapeHtml(p.avatar)}" alt="">`;
+        if(p.displayName) document.getElementById('profileNickname').textContent = p.displayName;
+      });
+    }
+    return;
+  }
+
+  const avatarEl = document.getElementById('profileAvatar');
+  const nicknameEl = document.getElementById('profileNickname');
+  avatarEl.textContent = '👤';
+  nicknameEl.textContent = 'Đang tải...';
+  profileOverlayEl.style.display = 'flex';
+
+  const isGuest = senderKey.indexOf('Khách#') === 0;
+  currentProfileTargetUid = (currentUser && !isGuest) ? senderKey : null;
+  updateKbBtnVisibility();
+
+  fetchChatProfile(senderKey).then(p=>{
+    p = p || {};
+    if(p.avatar){
+      avatarEl.innerHTML = `<img src="${escapeHtml(p.avatar)}" alt="">`;
+    } else if(p.avatarEmoji){
+      avatarEl.textContent = p.avatarEmoji;
+    } else {
+      avatarEl.textContent = '👤';
+    }
+    nicknameEl.textContent = p.displayName || senderKey;
+  });
+}
+
+document.getElementById('profileCloseBtn').addEventListener('click', ()=>{
+  profileOverlayEl.style.display = 'none';
+});
+profileOverlayEl.addEventListener('click', (e)=>{
+  if(e.target === profileOverlayEl) profileOverlayEl.style.display = 'none';
+});
+
+/* ============== BOT NỐI TỪ ============== */
+const NOITU_ROUND_MS = 30000;
+const NOITU_REVEAL_DELAY_MS = 5000;
+const NOITU_MIN_PLAYERS = 3;
+
+/* Từ điển nối từ – rút gọn từ file gốc (có thể mở rộng thêm) */
+const NOITU_WORDS = [
+  "an toàn","an ninh","an vui","ba ba","ba má","ba mẹ","ba ngày","ba tháng","ba tuổi",
+  "bác sĩ","bác học","bác ái","bài học","bài hát","bài thơ","bài toán","bàn tay","bàn chân",
+  "bạn bè","bạn thân","bạn học","bạn trai","bạn gái","bão táp","bão tố","bão giông",
+  "bếp núc","bếp lửa","biển cả","biển xanh","biển khơi","bình an","bình yên","bình minh",
+  "bóng đá","bóng chuyền","bóng rổ","bóng bàn","bướm đêm","bướm trắng","ca hát","ca sĩ",
+  "cây cối","cây xanh","cây cao","chăm chỉ","chăm sóc","cháu chắt","cháu nội","cháu ngoại",
+  "chéo buộc","chim chóc","chim sẻ","chim én","chim sâu","chợ búa","chợ phiên","chợ quê",
+  "chú ý","chú rể","chú bác","chúc mừng","chúc phúc","chung sức","chung tay","chung sống",
+  "cô giáo","cô dâu","cô bác","cô chú","công việc","công việc","công ty","công viên",
+  "cua biển","cua đồng","cua gạch","cúi đầu","cúi chào","cười nói","cười đùa","cười lớn",
+  "da dẻ","da thịt","danh dự","danh tiếng","danh sách","dễ dàng","dễ chịu","dễ thương",
+  "điện thoại","điện lực","điện năng","điện ảnh","đường phố","đường sá","đường dài",
+  "đất nước","đất đai","đất cát","đất đỏ","đồng bào","đồng chí","đồng hương","đồng nghiệp",
+  "đồng tiền","đồng xu","gia đình","gia đình","gia tộc","gia đình","giáo dục","giáo viên",
+  "gió mùa","gió bão","gió lạnh","gió mát","hoa hồng","hoa sen","hoa mai","hoa đào",
+  "học hành","học hỏi","học sinh","học tập","học trò","hạnh phúc","hạnh phúc","hạnh phúc",
+  "hạnh phúc","hạnh phúc","hạnh phúc","hạnh phúc","hạnh phúc","hạnh phúc","hạnh phúc",
+  "kết bạn","kết nối","kết thúc","kết quả","kết hôn","lá thư","lá cờ","lá xanh",
+  "làm việc","làm ăn","làm giàu","làm người","lòng tốt","lòng tin","lòng nhân","lòng yêu",
+  "mẹ cha","mẹ hiền","mẹ yêu","mẹ chồng","mẹ vợ","mưa bão","mưa rào","mưa phùn",
+  "mưa to","nắng mưa","nắng nóng","nắng sớm","nắng vàng","ngôi nhà","ngôi sao","ngôi trường",
+  "người thân","người bạn","người yêu","người lớn","nhà cửa","nhà ở","nhà cửa","nhà trường",
+  "nước uống","nước sạch","nước ngọt","nước biển","nước mắt","ô tô","ô dù","ô cửa",
+  "phố phường","phố xá","phố cổ","quê hương","quê nhà","quê quán","quê xa","rừng núi",
+  "rừng xanh","rừng sâu","sông nước","sông hồ","sông biển","sông cái","sách vở","sách giáo",
+  "sức khỏe","sức mạnh","sức sống","sức lực","thanh niên","thanh bình","thanh tao",
+  "thành công","thành phố","thành thị","thành quả","thời gian","thời tiết","thời đại",
+  "thời trang","tiền bạc","tiền của","tiền lương","tiền tệ","tình bạn","tình yêu","tình cảm",
+  "tình người","trái đất","trái tim","trái cây","trái ngọt","trường học","trường lớp",
+  "trường đời","vui vẻ","vui mừng","vui chơi","vui sống","xe cộ","xe máy","xe hơi",
+  "xe đạp","xã hội","xã viên","xã thôn","yêu thương","yêu quý","yêu mến","yêu đời",
+  "ăn uống","ăn chơi","ăn ngủ","ăn học","ấm áp","ấm no","ấm cúng","ấm êm",
+  "ước mơ","ước muốn","ước ao","ước vọng","đẹp đẽ","đẹp mắt","đẹp người","đẹp trai",
+  "đông đúc","đông vui","đông đủ","đông đảo","đồng bằng","đồng ruộng","đồng cỏ","đồng lúa"
+];
+const NOITU_WORD_SET = new Set(NOITU_WORDS.map(w => w.trim().toLowerCase().replace(/\s+/g," ")));
+
+function noituLastSyllable(word){
+  const p = word.trim().split(" ");
+  return p[p.length-1];
+}
+function noituNormalize(str){
+  return String(str||"").trim().toLowerCase().replace(/\s+/g, " ");
+}
+function pickNoituWord(){
+  return NOITU_WORDS[Math.floor(Math.random()*NOITU_WORDS.length)];
+}
+
+const noituGameRef = db.ref("wordChainGame");
+let noituState = null;
+let noituScheduledRoundId = null;
+let noituScheduledRevealId = null;
+let noituEnabled = true;
+
+db.ref("noituConfig/enabled").on("value", (snap)=>{
+  const v = snap.val();
+  noituEnabled = (v !== false);
+}, ()=>{});
+
+function noituDisplayName(uidKey){
+  return fetchChatProfile(uidKey).then(p => (p && p.displayName) ? p.displayName : uidKey);
+}
+
+function postNoituSysMsg(text, extra){
+  db.ref("chats/" + WORLD_CHAT_ROOM).push(Object.assign({ sys:true, t:text, ts:Date.now() }, extra||{})).catch(()=>{});
+}
+
+function scheduleNoituExpiry(roundId, deadline){
+  const wait = Math.max(0, (deadline||0) - Date.now() + 400);
+  setTimeout(()=>{ tryExpireNoituRound(roundId); }, wait);
+}
+
+function tryExpireNoituRound(roundId){
+  noituGameRef.transaction(cur=>{
+    if(!cur || !cur.active || cur.roundId !== roundId) return;
+    return Object.assign({}, cur, { active:false });
+  }, (err, committed, snap)=>{
+    if(err || !committed) return;
+    const val = snap.val();
+    if(val) postNoituSysMsg(`⏰ Hết giờ rồi! Không ai nối được từ "${val.word}". Gõ /botnoitu để mở ván mới nhé!`, {noitu:true});
+  });
+}
+
+noituGameRef.on("value", (snap)=>{
+  const val = snap.val();
+  noituState = val;
+  updateNoituChatLock();
+  if(val && val.pending && val.revealAt && noituScheduledRevealId !== val.roundId){
+    noituScheduledRevealId = val.roundId;
+    scheduleNoituReveal(val.roundId, val.revealAt);
+  }
+  if(val && val.active && val.deadline && noituScheduledRoundId !== val.roundId){
+    noituScheduledRoundId = val.roundId;
+    scheduleNoituExpiry(val.roundId, val.deadline);
+  }
+}, ()=>{});
+
+function updateNoituChatLock(){
+  const locked = !!(noituState && noituState.pending);
+  if(worldChatInput){
+    worldChatInput.disabled = locked;
+    worldChatInput.placeholder = locked ? 'Bot đang nghĩ từ... chờ chút nhé!' : 'Nhắn gì đó cho mọi người...';
+  }
+  if(worldChatSendBtn) worldChatSendBtn.disabled = locked;
+}
+
+function handleNoituCommand(raw){
+  if(noituNormalize(raw) !== "/botnoitu") return false;
+  if(!noituEnabled){
+    postNoituSysMsg("🤖 Bot Nối từ hiện đã hết tiền, không thể mở ván mới. Hẹn mọi người dịp khác nhé!", {noitu:true});
+    return true;
+  }
+  startNoituRound();
+  return true;
+}
+
+function startNoituRound(){
+  noituGameRef.transaction(cur=>{
+    if(cur && (cur.active || cur.pending || cur.waiting)) return;
+    const word = pickNoituWord();
+    const now = Date.now();
+    return {
+      active:false,
+      pending:false,
+      waiting:true,
+      solved:false,
+      word: word,
+      lastSyllable: noituLastSyllable(word),
+      chatters: {},
+      calledAt: now,
+      roundId: (cur && cur.roundId ? cur.roundId : 0) + 1,
+      startedBy: myChatName()
+    };
+  }, (err, committed, snap)=>{
+    if(err){ toast("Có lỗi xảy ra, thử lại nhé!"); return; }
+    if(!committed){ toast("⏳ Đang có 1 từ chưa ai nối được, đợi ván này xong đã nhé!"); return; }
+    const val = snap.val();
+    if(!val) return;
+    postNoituSysMsg(`🤖 Bot Nối từ đã sẵn sàng! Cần thêm ít nhất ${NOITU_MIN_PLAYERS} người chat trong chat chung thì bot mới đưa từ ra nhé.`, {noitu:true});
+  });
+}
+
+function noteNoituChatter(sender){
+  const cur = noituState;
+  if(!cur || !cur.waiting || cur.pending || cur.active) return;
+  if(cur.chatters && cur.chatters[sender]) return;
+  const roundId = cur.roundId;
+  noituGameRef.transaction(c=>{
+    if(!c || !c.waiting || c.pending || c.active || c.roundId !== roundId) return;
+    const chatters = Object.assign({}, c.chatters || {});
+    chatters[sender] = true;
+    const enough = Object.keys(chatters).length >= NOITU_MIN_PLAYERS;
+    if(enough){
+      const now = Date.now();
+      return Object.assign({}, c, { chatters:chatters, waiting:false, pending:true, revealAt: now + NOITU_REVEAL_DELAY_MS });
+    }
+    return Object.assign({}, c, { chatters:chatters });
+  }, (err, committed, snap)=>{
+    if(err || !committed) return;
+    const val = snap.val();
+    if(val && val.pending && noituScheduledRevealId !== val.roundId){
+      postNoituSysMsg("🤖 Đã đủ người rồi! Bot đang nghĩ từ... hiện ra sau 5 giây nữa nhé! ⏳", {noitu:true});
+      noituScheduledRevealId = val.roundId;
+      scheduleNoituReveal(val.roundId, val.revealAt);
+    }
+  });
+}
+
+function scheduleNoituReveal(roundId, revealAt){
+  const wait = Math.max(0, (revealAt||0) - Date.now() + 200);
+  setTimeout(()=>{ tryRevealNoituRound(roundId); }, wait);
+}
+
+function tryRevealNoituRound(roundId){
+  noituGameRef.transaction(cur=>{
+    if(!cur || !cur.pending || cur.active || cur.roundId !== roundId) return;
+    const now = Date.now();
+    return Object.assign({}, cur, { pending:false, active:true, startedAt: now, deadline: now + NOITU_ROUND_MS });
+  }, (err, committed, snap)=>{
+    if(err || !committed) return;
+    const val = snap.val();
+    if(!val) return;
+    postNoituSysMsg(`🤖 BOT NỐI TỪ: "${val.word}" — ai nối được từ bắt đầu bằng "${val.lastSyllable}" nhanh nhất trong 30 giây!`, {noitu:true});
+    scheduleNoituExpiry(val.roundId, val.deadline);
+  });
+}
+
+function handleNoituAnswer(raw){
+  const cur = noituState;
+  if(!noituEnabled) return false;
+  if(!cur || !cur.active) return false;
+  const parts = raw.trim().split(/\s+/);
+  if(parts.length !== 2) return false;
+  if(parts[0].toLowerCase() !== cur.lastSyllable) return false;
+  const answer = noituNormalize(raw);
+  if(!NOITU_WORD_SET.has(answer)) return false;
+
+  const roundId = cur.roundId;
+  const me = myChatName();
+  noituGameRef.transaction(c=>{
+    if(!c || !c.active || c.solved || c.roundId !== roundId) return;
+    return Object.assign({}, c, { active:false, solved:true, winner:me, answer:answer });
+  }, (err, committed, snap)=>{
+    if(err) return;
+    if(committed && snap.val() && snap.val().winner === me){
+      toast("🎉 Bạn nối đúng!");
+      noituDisplayName(me).then(name=>{
+        postNoituSysMsg(`🏆 ${name} đã nối đúng "${answer}"! Gõ /botnoitu để chơi ván tiếp theo nhé!`, {noituWin:true});
+      });
+    } else {
+      toast("😅 Bạn nối đúng nhưng chậm chân rồi, đợi ván sau nhé!");
+    }
+  });
+  return true;
+}
+
+/* ============== BOT VUA TIẾNG VIỆT ============== */
+const VTV_ROUND_MS = 30000;
+
+function vtvNormalize(str){
+  return String(str||"").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function vtvShuffleArray(arr){
+  const a = arr.slice();
+  for(let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+function vtvScrambleWord(word){
+  const syllables = word.trim().split(" ");
+  const scrambleSyllable = (s)=>{
+    const chars = vtvShuffleArray(s.split(""));
+    return chars.join("");
+  };
+  let attempt = 0;
+  let result;
+  do{
+    const scrambledSyllables = syllables.map(scrambleSyllable);
+    const ordered = syllables.length > 1 ? vtvShuffleArray(scrambledSyllables) : scrambledSyllables;
+    result = ordered.join(" ");
+    attempt++;
+  } while(result.toLowerCase() === word.toLowerCase() && attempt < 8);
+  return result;
+}
+
+function vtvFormatScrambled(scrambled){
+  return scrambled.split(" ").map(syl => syl.split("").join("/")).join("   ");
+}
+
+function pickVtvWord(){
+  return NOITU_WORDS[Math.floor(Math.random()*NOITU_WORDS.length)];
+}
+
+const vtvGameRef = db.ref("vtvGame");
+let vtvState = null;
+let vtvScheduledRoundId = null;
+let vtvEnabled = true;
+
+db.ref("vtvConfig/enabled").on("value", (snap)=>{
+  const v = snap.val();
+  vtvEnabled = (v !== false);
+}, ()=>{});
+
+function vtvDisplayName(uidKey){
+  return fetchChatProfile(uidKey).then(p => (p && p.displayName) ? p.displayName : uidKey);
+}
+
+function postVtvSysMsg(text, extra){
+  db.ref("chats/" + WORLD_CHAT_ROOM).push(Object.assign({ sys:true, t:text, ts:Date.now() }, extra||{})).catch(()=>{});
+}
+
+function scheduleVtvExpiry(roundId, deadline){
+  const wait = Math.max(0, (deadline||0) - Date.now() + 400);
+  setTimeout(()=>{ tryExpireVtvRound(roundId); }, wait);
+}
+
+function tryExpireVtvRound(roundId){
+  vtvGameRef.transaction(cur=>{
+    if(!cur || !cur.active || cur.roundId !== roundId) return;
+    return Object.assign({}, cur, { active:false });
+  }, (err, committed, snap)=>{
+    if(err || !committed) return;
+    const val = snap.val();
+    if(val) postVtvSysMsg(`⏰ Hết giờ rồi! Chưa ai đoán đúng từ "${val.word}" (đã xáo: "${val.scrambled}"). Gõ /botvtv để chơi câu mới nhé!`, {vtv:true});
+  });
+}
+
+vtvGameRef.on("value", (snap)=>{
+  const val = snap.val();
+  vtvState = val;
+  if(val && val.active && val.deadline && vtvScheduledRoundId !== val.roundId){
+    vtvScheduledRoundId = val.roundId;
+    scheduleVtvExpiry(val.roundId, val.deadline);
+  }
+}, ()=>{});
+
+function handleVtvCommand(raw){
+  if(vtvNormalize(raw) !== "/botvtv") return false;
+  if(!vtvEnabled){
+    postVtvSysMsg("🤖 Bot Vua Tiếng Việt hiện đã hết tiền, không thể mở câu mới. Hẹn mọi người dịp khác nhé!", {vtv:true});
+    return true;
+  }
+  startVtvRound();
+  return true;
+}
+
+function startVtvRound(){
+  vtvGameRef.transaction(cur=>{
+    if(cur && cur.active) return;
+    const word = pickVtvWord();
+    const scrambled = vtvScrambleWord(word);
+    const now = Date.now();
+    return {
+      active:true,
+      solved:false,
+      word: word,
+      scrambled: scrambled,
+      startedAt: now,
+      deadline: now + VTV_ROUND_MS,
+      roundId: (cur && cur.roundId ? cur.roundId : 0) + 1,
+      startedBy: myChatName()
+    };
+  }, (err, committed, snap)=>{
+    if(err){ toast("Có lỗi xảy ra, thử lại nhé!"); return; }
+    if(!committed){ toast("⏳ Đang có 1 câu chưa ai đoán được, đợi câu này xong đã nhé!"); return; }
+    const val = snap.val();
+    if(!val) return;
+    postVtvSysMsg(`🤖 BOT VUA TIẾNG VIỆT\n${vtvFormatScrambled(val.scrambled)}`, {vtv:true});
+    scheduleVtvExpiry(val.roundId, val.deadline);
+  });
+}
+
+function handleVtvAnswer(raw){
+  const cur = vtvState;
+  if(!vtvEnabled) return false;
+  if(!cur || !cur.active) return false;
+  const answer = vtvNormalize(raw);
+  if(answer !== vtvNormalize(cur.word)) return false;
+
+  const roundId = cur.roundId;
+  const me = myChatName();
+  vtvGameRef.transaction(c=>{
+    if(!c || !c.active || c.solved || c.roundId !== roundId) return;
+    return Object.assign({}, c, { active:false, solved:true, winner:me });
+  }, (err, committed, snap)=>{
+    if(err) return;
+    if(committed && snap.val() && snap.val().winner === me){
+      toast("🎉 Bạn đoán đúng!");
+      vtvDisplayName(me).then(name=>{
+        postVtvSysMsg(`🏆 ${name} đã đoán đúng "${cur.word}"! Gõ /botvtv để chơi câu tiếp theo nhé!`, {vtvWin:true});
+      });
+    }
+  });
+  return true;
+}
+
+})();
+
+function goBack(){
+  window.location.href = '/chat';
+}
+</script>
+</body>
+</html>
