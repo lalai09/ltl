@@ -319,15 +319,15 @@
 
 <script>
   // ==== FIREBASE CONFIG ====
+  // 🔴 DÁN CẤU HÌNH DỰ ÁN MỚI CỦA BẠN VÀO ĐÂY:
   const firebaseConfig = {
-    apiKey: "AIzaSyBqsf_qiiIfppQL5DI-S6QyjXcpI-zRjtU",
-    authDomain: "tapnham-28918.firebaseapp.com",
-    databaseURL: "https://tapnham-28918-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "tapnham-28918",
-    storageBucket: "tapnham-28918.firebasestorage.app",
-    messagingSenderId: "4204379834",
-    appId: "1:4204379834:web:e4eed873d1af4a709dcc83",
-    measurementId: "G-Q6EKJXCZW1"
+    apiKey: "DÁN_API_KEY_DỰ_ÁN_MỚI",
+    authDomain: "DÁN_AUTH_DOMAIN_DỰ_ÁN_MỚI",
+    databaseURL: "DÁN_DATABASE_URL_DỰ_ÁN_MỚI",
+    projectId: "DÁN_PROJECT_ID_DỰ_ÁN_MỚI",
+    storageBucket: "DÁN_STORAGE_BUCKET_DỰ_ÁN_MỚI",
+    messagingSenderId: "DÁN_MESSAGING_SENDER_ID_DỰ_ÁN_MỚI",
+    appId: "DÁN_APP_ID_DỰ_ÁN_MỚI"
   };
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
@@ -358,7 +358,6 @@
     loginBtn.disabled = loading;
   }
 
-  // Sanitize key cho Firebase (không cho phép . # $ [ ] /)
   function toKey(name){
     return name.trim().toLowerCase().replace(/[.#$\[\]\/]/g, '_');
   }
@@ -427,10 +426,8 @@
     return div.innerHTML;
   }
 
-  let firstLoad = true;
   function listenMessages(){
     messagesDiv.innerHTML = '';
-    // Chỉ lấy 100 tin nhắn gần nhất
     messagesRef.limitToLast(100).on('child_added', (snap) => {
       const m = snap.val();
       renderMessage(m);
@@ -470,7 +467,6 @@
     msgInput.value = '';
   }
 
-  // Events
   loginBtn.addEventListener('click', login);
   logoutBtn.addEventListener('click', logout);
   sendBtn.addEventListener('click', sendMessage);
@@ -481,7 +477,6 @@
     if(e.key === 'Enter') login();
   });
 
-  // Auto login nếu đã lưu trước đó
   window.addEventListener('DOMContentLoaded', async () => {
     const saved = localStorage.getItem(LS_KEY);
     if(saved){
