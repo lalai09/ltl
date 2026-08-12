@@ -369,7 +369,7 @@
         <div class="desc">Chọn ảnh từ thư viện trên máy của bạn</div>
       </div>
       <div class="price">30 xu</div>
-      <button type="button" class="buyBtn" data-item="avatar" data-price="75">Mua</button>
+      <button type="button" class="buyBtn" data-item="avatar" data-price="30">Mua</button>
     </div>
     <div class="shopItem" data-item="color">
       <div class="icon">🎨</div>
@@ -378,7 +378,7 @@
         <div class="desc">Đổi màu khung tin nhắn của bạn</div>
       </div>
       <div class="price">40 xu</div>
-      <button type="button" class="buyBtn" data-item="color" data-price="65">Mua</button>
+      <button type="button" class="buyBtn" data-item="color" data-price="40">Mua</button>
     </div>
 
     <div class="invSection">
@@ -471,7 +471,7 @@
       const snap = await db.ref('bot_words').get();
       if (snap.exists()) {
         const val = snap.val();
-        const norm = (s) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        const norm = (s) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ').normalize('NFC');
         if (Array.isArray(val)) {
           WORD_LIST = val.map(norm).filter(Boolean);
         } else {
@@ -512,7 +512,8 @@
   const SCRAMBLE_TIME_LIMIT = 30000;
 
   function normalize(str) {
-    return str.trim().toLowerCase().replace(/\s+/g, ' ');
+    // NFC để thống nhất dấu tiếng Việt (tránh lệch tổ hợp ký tự)
+    return (str || '').trim().toLowerCase().replace(/\s+/g, ' ').normalize('NFC');
   }
 
   function getLastSyllable(word) {
@@ -601,7 +602,7 @@
     return Date.now() - (currentChallenge.startedAt || 0) <= limit;
   }
 
-  // Hết giờ: thông báo rồi xóa challenge (client nào start mới set timeout)
+  // Hết giờ: thông báo (xáo chữ thì hiện đáp án) rồi xóa challenge
   function scheduleChallengeExpire(limitMs) {
     clearChallengeTimer();
     challengeTimer = setTimeout(async () => {
@@ -609,8 +610,11 @@
         const snap = await challengeRef.get();
         if (snap.exists() && !snap.val().solved) {
           const ch = snap.val();
-          const label = ch.type === 'scramble' ? 'xáo chữ' : 'nối từ';
-          postBot(`⏰ Hết thời gian (${label})! Không ai trả lời đúng.`);
+          if (ch.type === 'scramble') {
+            postBot(`⏰ Hết thời gian (xáo chữ)!\nĐáp án: 「${ch.original}」`);
+          } else {
+            postBot(`⏰ Hết thời gian (nối từ)! Không ai trả lời đúng.`);
+          }
           await challengeRef.remove();
         }
       } catch (e) {}
@@ -707,10 +711,10 @@
     }
 
     if (ch.type === 'scramble') {
-      const orig = ch.original || '';
-      const textNoSpace = text.replace(/\s+/g, '');
-      const origNoSpace = orig.replace(/\s+/g, '');
-      return text === orig || textNoSpace === origNoSpace;
+      // Chỉ chấp nhận khớp đúng nguyên từ (có khoảng trắng).
+      // Không so bỏ space — tránh "hộ trì" ≡ "hột rì".
+      const orig = normalize(ch.original || '');
+      return text === orig;
     }
     return false;
   }
