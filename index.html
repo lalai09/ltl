@@ -283,16 +283,12 @@
     <p class="sub">Đăng nhập để tham gia phòng chat</p>
 
     <div class="field">
-      <label>Tên đăng nhập</label>
+      <label>Tên hiển thị</label>
       <input type="text" id="username" placeholder="Nhập tên của bạn" maxlength="20" autocomplete="off">
-    </div>
-    <div class="field">
-      <label>Mật khẩu</label>
-      <input type="password" id="password" placeholder="Nhập mật khẩu" maxlength="30" autocomplete="off">
     </div>
 
     <div class="btnRow">
-      <button class="btnPrimary" id="loginBtn" style="flex:1;">Đăng nhập</button>
+      <button class="btnPrimary" id="loginBtn" style="flex:1;">Vào chat</button>
     </div>
     <div id="loginMsg"></div>
   </div>
@@ -342,7 +338,6 @@
   const loginScreen = document.getElementById('loginScreen');
   const chatScreen = document.getElementById('chatScreen');
   const usernameInput = document.getElementById('username');
-  const passwordInput = document.getElementById('password');
   const loginBtn = document.getElementById('loginBtn');
   const registerBtn = document.getElementById('registerBtn');
   const loginMsg = document.getElementById('loginMsg');
@@ -372,32 +367,17 @@
 
   async function login(){
     const name = usernameInput.value.trim();
-    const pass = passwordInput.value;
-    if(!name || !pass){ showMsg('Vui lòng nhập đầy đủ tên và mật khẩu'); return; }
-    if(name.length < 2){ showMsg('Tên đăng nhập quá ngắn'); return; }
-    if(pass.length < 3){ showMsg('Mật khẩu phải từ 3 ký tự trở lên'); return; }
+    if(!name){ showMsg('Vui lòng nhập tên hiển thị'); return; }
+    if(name.length < 2){ showMsg('Tên quá ngắn'); return; }
 
     setLoading(true);
     const key = toKey(name);
     try{
-      const snap = await usersRef.child(key).get();
-      if(!snap.exists()){
-        // Chưa có tài khoản -> tự tạo mới
-        await usersRef.child(key).set({
-          displayName: name,
-          password: pass,
-          createdAt: Date.now()
-        });
-        loginSuccess(name);
-        return;
-      }
-      const data = snap.val();
-      if(data.password !== pass){
-        showMsg('Sai mật khẩu');
-        setLoading(false);
-        return;
-      }
-      loginSuccess(data.displayName);
+      await usersRef.child(key).set({
+        displayName: name,
+        lastSeen: Date.now()
+      });
+      loginSuccess(name);
     }catch(e){
       showMsg('Lỗi: ' + e.message);
       setLoading(false);
@@ -427,7 +407,6 @@
     chatScreen.style.display = 'none';
     loginScreen.style.display = 'flex';
     usernameInput.value = '';
-    passwordInput.value = '';
     loginMsg.textContent = '';
   }
 
@@ -500,7 +479,7 @@
   msgInput.addEventListener('keydown', (e) => {
     if(e.key === 'Enter') sendMessage();
   });
-  passwordInput.addEventListener('keydown', (e) => {
+  usernameInput.addEventListener('keydown', (e) => {
     if(e.key === 'Enter') login();
   });
 
@@ -508,18 +487,8 @@
   window.addEventListener('DOMContentLoaded', async () => {
     const saved = localStorage.getItem(LS_KEY);
     if(saved){
-      const key = toKey(saved);
-      try{
-        const snap = await usersRef.child(key).get();
-        if(snap.exists()){
-          myName = snap.val().displayName;
-          enterChat();
-        } else {
-          localStorage.removeItem(LS_KEY);
-        }
-      }catch(e){
-        console.error(e);
-      }
+      myName = saved;
+      enterChat();
     }
   });
 
