@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Chat Chung + Bot Nối Từ</title>
+<title>Chat</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
@@ -292,7 +292,7 @@
   let wordSet = new Set();
   let byFirst = {};
 
-  const BOT_NAME = '🤖 Bot';
+  const BOT_NAME = '🤖 Bot Nối Từ';
   const TIME_LIMIT = 15000; // 15 giây
 
   async function loadWordListFromFirebase() {
@@ -378,11 +378,8 @@
     }
   }
 
-  function endGame(reason) {
+  function endGame() {
     clearGameTimer();
-    if (game) {
-      postBot(`⏹️ Hết game! ${reason}\nChuỗi nối được: ${game.chain} từ.\nGõ /botnt để chơi lại.`);
-    }
     game = null;
   }
 
@@ -390,24 +387,27 @@
     clearGameTimer();
     if (!game) return;
     game.startTs = Date.now();
+    // Hết giờ: tắt game im lặng, không thông báo
     game.timer = setTimeout(() => {
-      if (game) {
-        endGame('Hết giờ 15 giây! Bạn đã thua.');
-      }
+      if (game) endGame();
     }, TIME_LIMIT);
   }
 
   function startBotGame() {
-    if (game) {
-      postBot('⚠️ Bạn đang chơi rồi. Hãy nối từ hiện tại hoặc đợi hết giờ.');
+    // /botnt luôn bắt đầu ván mới (huỷ ván cũ nếu còn)
+    clearGameTimer();
+    game = null;
+
+    if (!WORD_LIST.length) {
+      // không spam lỗi — chỉ bỏ qua nếu chưa có từ điển
+      console.warn('Chưa có từ điển bot_words');
       return;
     }
+
     const used = new Set();
     const first = pickRandomWord(used);
-    if (!first) {
-      postBot('Lỗi: không tìm được từ để bắt đầu.');
-      return;
-    }
+    if (!first) return;
+
     used.add(first);
     game = {
       lastWord: first,
@@ -416,58 +416,40 @@
       startTs: Date.now(),
       chain: 1
     };
-    postBot(`🎮 Bắt đầu Nối Từ!\nTừ của bot: 「${first}」\nHãy nối trong 15 giây (từ bắt đầu bằng 「${getLastSyllable(first)}」).\nTrả lời đúng + nhanh → +5 xu!`);
+    // Chỉ hiện từ cần nối, không thêm thông tin
+    postBot(`「${first}」`);
     startTimer();
   }
 
   async function handlePlayerWord(rawText) {
     if (!game || !myName) return false;
     const text = normalize(rawText);
-    // Must be two syllables roughly
+
+    // Không phải từ 2 tiếng → coi như tin nhắn thường
     if (!text.includes(' ') || text.split(' ').length !== 2) {
-      postBot(`❌ Từ phải là từ ghép 2 tiếng. Ví dụ: "học sinh"`);
-      return true; // consumed
+      return false;
     }
-    if (!wordSet.has(text)) {
-      postBot(`❌ Từ 「${text}」 không có trong từ điển bot. Thử từ khác!`);
-      return true;
-    }
-    if (game.used.has(text)) {
-      postBot(`❌ Từ 「${text}」 đã dùng rồi. Không được lặp!`);
-      return true;
-    }
+
+    // Sai / không có trong từ điển / trùng / sai vần → im lặng, tin vẫn hiện như chat thường
+    if (!wordSet.has(text)) return false;
+    if (game.used.has(text)) return false;
     const expected = getLastSyllable(game.lastWord);
     const actualFirst = text.split(' ')[0];
-    if (actualFirst !== expected) {
-      postBot(`❌ Sai! Cần bắt đầu bằng 「${expected}」 (từ bot là 「${game.lastWord}」)`);
-      return true;
-    }
-    // Valid!
-    const elapsed = Date.now() - game.startTs;
+    if (actualFirst !== expected) return false;
+
+    // ===== ĐÚNG =====
     clearGameTimer();
     game.used.add(text);
-    game.chain++;
-    game.lastWord = text;
 
     // +5 xu
     myXu += 5;
     updateXuDisplay();
     await saveXu();
 
-    postBot(`✅ Đúng rồi! (+5 xu) ⏱️ ${Math.round(elapsed/1000)}s\nTổng xu: ${myXu}\nChuỗi: ${game.chain}`);
-
-    // Bot continues
-    const next = pickNextWord(getLastSyllable(text), game.used);
-    if (!next) {
-      endGame('Bot hết từ để nối! Bạn thắng rồi 🎉');
-      return true;
-    }
-    game.used.add(next);
-    game.chain++;
-    game.lastWord = next;
-    postBot(`Bot nối: 「${next}」\nBạn nối tiếp trong 15 giây (bắt đầu bằng 「${getLastSyllable(next)}」)`);
-    startTimer();
-    return true;
+    // Báo tên người trả lời đúng rồi kết thúc ván
+    postBot(`✅ ${myName} đã trả lời đúng!\n「${text}」\nGõ /botnt để chơi tiếp.`);
+    game = null;
+    return true; // đã xử lý — vẫn post tin user bên dưới
   }
 
   async function saveXu() {
