@@ -200,6 +200,86 @@
     header h2{font-size:15px;}
     header .userInfo{font-size:11px;}
   }
+
+  .xuBadge{ cursor:pointer; transition:0.15s; }
+  .xuBadge:hover{ filter:brightness(1.2); transform:scale(1.05); }
+
+  /* Shop modal */
+  #shopOverlay{
+    display:none; position:fixed; inset:0; z-index:1000;
+    background:rgba(0,0,0,0.65); backdrop-filter:blur(4px);
+    align-items:center; justify-content:center; padding:16px;
+  }
+  #shopOverlay.open{ display:flex; }
+  .shopBox{
+    background:linear-gradient(145deg, var(--panel), var(--panel2));
+    border:1px solid var(--border); border-radius:16px;
+    width:100%; max-width:420px; max-height:90vh; overflow-y:auto;
+    box-shadow:0 0 40px rgba(0,229,255,0.1), 0 12px 40px rgba(0,0,0,0.5);
+    padding:22px;
+  }
+  .shopBox h2{
+    font-size:20px; margin-bottom:4px;
+    background:linear-gradient(90deg, var(--neon), var(--neon2));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .shopSub{ color:var(--muted); font-size:12px; margin-bottom:16px; }
+  .shopItem{
+    display:flex; align-items:center; gap:12px;
+    padding:12px; border:1px solid var(--border); border-radius:12px;
+    margin-bottom:10px; background:#0b1220;
+  }
+  .shopItem .icon{ font-size:28px; width:40px; text-align:center; flex-shrink:0; }
+  .shopItem .info{ flex:1; min-width:0; }
+  .shopItem .info .name{ font-weight:700; font-size:14px; }
+  .shopItem .info .desc{ font-size:11.5px; color:var(--muted); margin-top:2px; }
+  .shopItem .price{
+    background:rgba(0,230,118,0.12); border:1px solid var(--success);
+    color:var(--success); padding:4px 10px; border-radius:16px;
+    font-size:12px; font-weight:700; white-space:nowrap;
+  }
+  .shopItem button{
+    padding:8px 12px; border-radius:8px; font-size:12px; font-weight:700;
+    background:linear-gradient(90deg, var(--neon), var(--neon2));
+    color:#04101a; border:none; cursor:pointer; white-space:nowrap;
+  }
+  .shopItem button:disabled{ opacity:0.45; cursor:not-allowed; }
+  .shopItem button.useBtn{
+    background:transparent; border:1px solid var(--neon2); color:var(--neon2);
+  }
+  .invSection{ margin-top:18px; }
+  .invSection h3{ font-size:14px; margin-bottom:10px; color:var(--neon); }
+  .shopClose{
+    margin-top:14px; width:100%; padding:11px; border-radius:10px;
+    background:transparent; border:1px solid var(--border); color:var(--muted);
+    cursor:pointer; font-size:14px;
+  }
+  .shopClose:hover{ border-color:var(--danger); color:var(--danger); }
+  .shopMsg{ font-size:12.5px; margin-top:8px; min-height:16px; text-align:center; }
+  .shopMsg.ok{ color:var(--success); }
+  .shopMsg.err{ color:var(--danger); }
+
+  /* prompt modal */
+  #promptOverlay{
+    display:none; position:fixed; inset:0; z-index:1100;
+    background:rgba(0,0,0,0.7); align-items:center; justify-content:center; padding:16px;
+  }
+  #promptOverlay.open{ display:flex; }
+  .promptBox{
+    background:var(--panel); border:1px solid var(--border); border-radius:14px;
+    padding:20px; width:100%; max-width:360px;
+  }
+  .promptBox h3{ font-size:16px; margin-bottom:10px; }
+  .promptBox input[type=text], .promptBox input[type=color]{
+    width:100%; padding:11px 12px; margin-bottom:12px;
+    background:#0b1220; border:1px solid var(--border); border-radius:10px;
+    color:var(--text); font-size:14px; outline:none;
+  }
+  .promptBox .btnRow{ display:flex; gap:8px; }
+  .promptBox .btnRow button{ flex:1; padding:11px; border-radius:10px; font-weight:700; cursor:pointer; border:none; font-size:14px; }
+  .promptOk{ background:linear-gradient(90deg, var(--neon), var(--neon2)); color:#04101a; }
+  .promptCancel{ background:transparent; border:1px solid var(--border)!important; color:var(--text); }
+
 </style>
 </head>
 <body>
@@ -251,6 +331,77 @@
   </div>
 </div>
 
+
+<!-- SHOP -->
+<div id="shopOverlay">
+  <div class="shopBox">
+    <h2>🛒 Cửa hàng</h2>
+    <p class="shopSub">Xu hiện có: <b id="shopXu" style="color:var(--success)">0</b> — Bấm xu trên header để mở lại</p>
+
+    <div class="shopItem" data-item="rename">
+      <div class="icon">🏷️</div>
+      <div class="info">
+        <div class="name">Thẻ đổi tên</div>
+        <div class="desc">Đổi tên hiển thị trong chat</div>
+      </div>
+      <div class="price">50 xu</div>
+      <button type="button" class="buyBtn" data-item="rename" data-price="50">Mua</button>
+    </div>
+    <div class="shopItem" data-item="avatar">
+      <div class="icon">🖼️</div>
+      <div class="info">
+        <div class="name">Thẻ đổi avatar</div>
+        <div class="desc">Đổi ảnh đại diện (link ảnh hoặc seed)</div>
+      </div>
+      <div class="price">30 xu</div>
+      <button type="button" class="buyBtn" data-item="avatar" data-price="30">Mua</button>
+    </div>
+    <div class="shopItem" data-item="color">
+      <div class="icon">🎨</div>
+      <div class="info">
+        <div class="name">Thẻ đổi màu chat</div>
+        <div class="desc">Đổi màu khung tin nhắn của bạn</div>
+      </div>
+      <div class="price">40 xu</div>
+      <button type="button" class="buyBtn" data-item="color" data-price="40">Mua</button>
+    </div>
+
+    <div class="invSection">
+      <h3>🎒 Túi đồ</h3>
+      <div class="shopItem">
+        <div class="icon">🏷️</div>
+        <div class="info"><div class="name">Thẻ đổi tên</div><div class="desc">Sở hữu: <b id="invRename">0</b></div></div>
+        <button type="button" class="useBtn" data-use="rename">Dùng</button>
+      </div>
+      <div class="shopItem">
+        <div class="icon">🖼️</div>
+        <div class="info"><div class="name">Thẻ đổi avatar</div><div class="desc">Sở hữu: <b id="invAvatar">0</b></div></div>
+        <button type="button" class="useBtn" data-use="avatar">Dùng</button>
+      </div>
+      <div class="shopItem">
+        <div class="icon">🎨</div>
+        <div class="info"><div class="name">Thẻ đổi màu chat</div><div class="desc">Sở hữu: <b id="invColor">0</b></div></div>
+        <button type="button" class="useBtn" data-use="color">Dùng</button>
+      </div>
+    </div>
+
+    <div id="shopMsg" class="shopMsg"></div>
+    <button type="button" class="shopClose" id="shopCloseBtn">Đóng</button>
+  </div>
+</div>
+
+<div id="promptOverlay">
+  <div class="promptBox">
+    <h3 id="promptTitle">Nhập</h3>
+    <input type="text" id="promptText" placeholder="" style="display:none">
+    <input type="color" id="promptColor" value="#00e5ff" style="display:none; height:44px; padding:4px;">
+    <div class="btnRow">
+      <button type="button" class="promptCancel" id="promptCancelBtn">Huỷ</button>
+      <button type="button" class="promptOk" id="promptOkBtn">Xác nhận</button>
+    </div>
+  </div>
+</div>
+
 <script>
   // ==== FIREBASE CONFIG ====
   const firebaseConfig = {
@@ -284,7 +435,12 @@
 
   let myName = null;
   let myXu = 0;
+  let myAvatar = '';
+  let myChatColor = '';
+  let myInv = { rename: 0, avatar: 0, color: 0 };
   const LS_KEY = 'chatchung_login';
+
+  const SHOP_PRICES = { rename: 50, avatar: 30, color: 40 };
 
   // ========== BOT NỐI TỪ ==========
   // Word list loaded from Firebase path: bot_words
@@ -530,16 +686,24 @@
         setLoading(false);
         return;
       }
-      loginSuccess(data.displayName, data.xu || 0);
+      loginSuccess(data.displayName, data.xu || 0, data);
     }catch(e){
       showMsg('Lỗi: ' + e.message);
       setLoading(false);
     }
   }
 
-  function loginSuccess(name, xu){
+  function loginSuccess(name, xu, extra){
     myName = name;
     myXu = xu || 0;
+    extra = extra || {};
+    myAvatar = extra.avatar || '';
+    myChatColor = extra.chatColor || '';
+    myInv = {
+      rename: (extra.inv && extra.inv.rename) || 0,
+      avatar: (extra.inv && extra.inv.avatar) || 0,
+      color: (extra.inv && extra.inv.color) || 0
+    };
     localStorage.setItem(LS_KEY, name);
     enterChat();
   }
@@ -549,9 +713,23 @@
     chatScreen.style.display = 'flex';
     loadWordListFromFirebase(); // sync dictionary from Firebase
     document.getElementById('headerName').textContent = myName;
-    document.getElementById('headerAvatar').src = 'https://api.dicebear.com/7.x/initials/svg?seed=' + encodeURIComponent(myName);
+    applyHeaderAvatar();
     updateXuDisplay();
     listenMessages();
+    setupShop();
+  }
+
+  function applyHeaderAvatar(){
+    const el = document.getElementById('headerAvatar');
+    if (myAvatar) {
+      el.src = myAvatar;
+    } else {
+      el.src = 'https://api.dicebear.com/7.x/initials/svg?seed=' + encodeURIComponent(myName);
+    }
+  }
+
+  function defaultAvatarUrl(name){
+    return 'https://api.dicebear.com/7.x/initials/svg?seed=' + encodeURIComponent(name || 'user');
   }
 
   function logout(){
@@ -560,6 +738,9 @@
     localStorage.removeItem(LS_KEY);
     myName = null;
     myXu = 0;
+    myAvatar = '';
+    myChatColor = '';
+    myInv = { rename: 0, avatar: 0, color: 0 };
     messagesRef.off();
     messagesDiv.innerHTML = '';
     chatScreen.style.display = 'none';
@@ -602,8 +783,28 @@
         '<div class="name">' + escapeHtml(m.sender) + '</div>' +
         '<div class="text">' + escapeHtml(m.text).replace(/\n/g, '<br>') + '</div>' +
         '<div class="time">' + formatTime(m.time) + '</div>';
+      // Màu chat custom (lưu trên tin nhắn hoặc của mình)
+      const col = m.chatColor || (isMine ? myChatColor : '');
+      if (col && !isBot) {
+        div.style.borderColor = col;
+        div.style.background = isMine
+          ? `linear-gradient(135deg, ${hexToRgba(col,0.22)}, ${hexToRgba(col,0.12)})`
+          : `linear-gradient(135deg, ${hexToRgba(col,0.18)}, var(--panel2))`;
+        const nameEl = div.querySelector('.name');
+        if (nameEl) nameEl.style.color = col;
+      }
     }
     messagesDiv.appendChild(div);
+  }
+
+  function hexToRgba(hex, a){
+    if (!hex) return 'rgba(0,229,255,'+a+')';
+    let h = hex.replace('#','');
+    if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+    const r = parseInt(h.slice(0,2),16)||0;
+    const g = parseInt(h.slice(2,4),16)||0;
+    const b = parseInt(h.slice(4,6),16)||0;
+    return `rgba(${r},${g},${b},${a})`;
   }
 
   function scrollToBottom(){
@@ -626,12 +827,14 @@
       const result = await handlePlayerWord(text);
       if (result && result.correct) {
         // 1) Đẩy tin user TRƯỚC
-        await messagesRef.push({
+        const userPayload = {
           type: 'chat',
           sender: myName,
           text: text,
           time: Date.now()
-        });
+        };
+        if (myChatColor) userPayload.chatColor = myChatColor;
+        await messagesRef.push(userPayload);
         // 2) Sau đó mới bot báo đúng (time +1ms để chắc chắn sau)
         await messagesRef.push({
           type: 'chat',
@@ -645,16 +848,215 @@
     }
 
     // Normal message
-    messagesRef.push({
+    const payload = {
       type: 'chat',
       sender: myName,
       text: text,
       time: Date.now()
-    });
+    };
+    if (myChatColor) payload.chatColor = myChatColor;
+    messagesRef.push(payload);
     msgInput.value = '';
   }
 
-  // Events
+
+  // ========== SHOP ==========
+  let promptResolver = null;
+
+  function setupShop(){
+    const badge = document.getElementById('xuDisplay');
+    badge.style.cursor = 'pointer';
+    badge.title = 'Mở cửa hàng';
+    badge.onclick = openShop;
+    document.getElementById('shopCloseBtn').onclick = closeShop;
+    document.getElementById('shopOverlay').onclick = (e) => {
+      if (e.target.id === 'shopOverlay') closeShop();
+    };
+    document.querySelectorAll('.buyBtn').forEach(btn => {
+      btn.onclick = () => buyItem(btn.dataset.item, parseInt(btn.dataset.price, 10));
+    });
+    document.querySelectorAll('.useBtn').forEach(btn => {
+      btn.onclick = () => useItem(btn.dataset.use);
+    });
+    document.getElementById('promptCancelBtn').onclick = () => finishPrompt(null);
+    document.getElementById('promptOkBtn').onclick = () => {
+      const textEl = document.getElementById('promptText');
+      const colorEl = document.getElementById('promptColor');
+      if (textEl.style.display !== 'none') finishPrompt(textEl.value.trim());
+      else finishPrompt(colorEl.value);
+    };
+  }
+
+  function openShop(){
+    refreshShopUI();
+    document.getElementById('shopOverlay').classList.add('open');
+    document.getElementById('shopMsg').textContent = '';
+  }
+  function closeShop(){
+    document.getElementById('shopOverlay').classList.remove('open');
+  }
+  function refreshShopUI(){
+    document.getElementById('shopXu').textContent = myXu;
+    document.getElementById('invRename').textContent = myInv.rename || 0;
+    document.getElementById('invAvatar').textContent = myInv.avatar || 0;
+    document.getElementById('invColor').textContent = myInv.color || 0;
+    updateXuDisplay();
+  }
+  function shopMsg(text, ok){
+    const el = document.getElementById('shopMsg');
+    el.className = 'shopMsg ' + (ok ? 'ok' : 'err');
+    el.textContent = text;
+  }
+
+  async function saveUserProfile(extra){
+    if (!myName) return;
+    const key = toKey(myName);
+    const data = Object.assign({
+      xu: myXu,
+      inv: myInv,
+      avatar: myAvatar || null,
+      chatColor: myChatColor || null
+    }, extra || {});
+    // if renaming, handled separately
+    await usersRef.child(key).update(data);
+  }
+
+  async function buyItem(item, price){
+    if (!myName) return;
+    if (myXu < price) {
+      shopMsg('Không đủ xu! Cần ' + price + ' xu.', false);
+      return;
+    }
+    myXu -= price;
+    myInv[item] = (myInv[item] || 0) + 1;
+    try {
+      await saveUserProfile();
+      refreshShopUI();
+      shopMsg('Đã mua thành công! Kiểm tra Túi đồ.', true);
+    } catch (e) {
+      myXu += price;
+      myInv[item] -= 1;
+      shopMsg('Lỗi: ' + e.message, false);
+    }
+  }
+
+  function askPrompt(title, mode){
+    // mode: 'text' | 'color'
+    return new Promise(resolve => {
+      promptResolver = resolve;
+      document.getElementById('promptTitle').textContent = title;
+      const t = document.getElementById('promptText');
+      const col = document.getElementById('promptColor');
+      if (mode === 'color') {
+        t.style.display = 'none';
+        col.style.display = 'block';
+        col.value = myChatColor || '#00e5ff';
+      } else {
+        col.style.display = 'none';
+        t.style.display = 'block';
+        t.value = '';
+        t.placeholder = title;
+      }
+      document.getElementById('promptOverlay').classList.add('open');
+      setTimeout(() => { if (mode !== 'color') t.focus(); }, 50);
+    });
+  }
+  function finishPrompt(val){
+    document.getElementById('promptOverlay').classList.remove('open');
+    const r = promptResolver;
+    promptResolver = null;
+    if (r) r(val);
+  }
+
+  async function useItem(item){
+    if (!myInv[item] || myInv[item] < 1) {
+      shopMsg('Bạn chưa có thẻ này. Hãy mua trước!', false);
+      return;
+    }
+    if (item === 'rename') {
+      const name = await askPrompt('Nhập tên mới (2–20 ký tự)', 'text');
+      if (!name) return;
+      if (name.length < 2 || name.length > 20) {
+        shopMsg('Tên phải từ 2–20 ký tự', false);
+        return;
+      }
+      const newKey = toKey(name);
+      const oldKey = toKey(myName);
+      if (newKey !== oldKey) {
+        const exists = await usersRef.child(newKey).get();
+        if (exists.exists()) {
+          shopMsg('Tên này đã có người dùng', false);
+          return;
+        }
+      }
+      try {
+        // copy user data under new key if key changed
+        const snap = await usersRef.child(oldKey).get();
+        const data = snap.val() || {};
+        myInv.rename -= 1;
+        data.displayName = name;
+        data.inv = myInv;
+        data.xu = myXu;
+        data.avatar = myAvatar || null;
+        data.chatColor = myChatColor || null;
+        if (newKey !== oldKey) {
+          await usersRef.child(newKey).set(data);
+          await usersRef.child(oldKey).remove();
+        } else {
+          await usersRef.child(oldKey).update(data);
+        }
+        myName = name;
+        localStorage.setItem(LS_KEY, name);
+        document.getElementById('headerName').textContent = myName;
+        if (!myAvatar) applyHeaderAvatar();
+        refreshShopUI();
+        shopMsg('Đã đổi tên thành 「' + name + '」', true);
+      } catch (e) {
+        myInv.rename += 1;
+        shopMsg('Lỗi đổi tên: ' + e.message, false);
+      }
+      return;
+    }
+
+    if (item === 'avatar') {
+      const url = await askPrompt('Dán link ảnh hoặc seed (vd: meo)', 'text');
+      if (!url) return;
+      let finalUrl = url;
+      if (!/^https?:\/\//i.test(url)) {
+        finalUrl = 'https://api.dicebear.com/7.x/bottts/svg?seed=' + encodeURIComponent(url);
+      }
+      try {
+        myInv.avatar -= 1;
+        myAvatar = finalUrl;
+        await saveUserProfile();
+        applyHeaderAvatar();
+        refreshShopUI();
+        shopMsg('Đã đổi avatar!', true);
+      } catch (e) {
+        myInv.avatar += 1;
+        shopMsg('Lỗi: ' + e.message, false);
+      }
+      return;
+    }
+
+    if (item === 'color') {
+      const col = await askPrompt('Chọn màu chat của bạn', 'color');
+      if (!col) return;
+      try {
+        myInv.color -= 1;
+        myChatColor = col;
+        await saveUserProfile();
+        refreshShopUI();
+        shopMsg('Đã đổi màu chat! Tin nhắn mới sẽ dùng màu này.', true);
+      } catch (e) {
+        myInv.color += 1;
+        shopMsg('Lỗi: ' + e.message, false);
+      }
+    }
+  }
+
+
+    // Events
   loginBtn.addEventListener('click', login);
   registerBtn.addEventListener('click', register);
   logoutBtn.addEventListener('click', logout);
@@ -677,6 +1079,13 @@
           const data = snap.val();
           myName = data.displayName;
           myXu = data.xu || 0;
+          myAvatar = data.avatar || '';
+          myChatColor = data.chatColor || '';
+          myInv = {
+            rename: (data.inv && data.inv.rename) || 0,
+            avatar: (data.inv && data.inv.avatar) || 0,
+            color: (data.inv && data.inv.color) || 0
+          };
           enterChat();
         } else {
           localStorage.removeItem(LS_KEY);
