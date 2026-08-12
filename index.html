@@ -321,7 +321,6 @@
       <h2 id="headerName"></h2>
     </div>
     <div class="userInfo">
-      Xin chào, <b id="currentUserName"></b>
       <button class="logoutBtn" id="logoutBtn">Đăng xuất</button>
     </div>
   </header>
@@ -361,7 +360,6 @@
   const loginBtn = document.getElementById('loginBtn');
   const registerBtn = document.getElementById('registerBtn');
   const loginMsg = document.getElementById('loginMsg');
-  const currentUserName = document.getElementById('currentUserName');
   const messagesDiv = document.getElementById('messages');
   const msgInput = document.getElementById('msgInput');
   const sendBtn = document.getElementById('sendBtn');
@@ -450,7 +448,6 @@
   function enterChat(){
     loginScreen.style.display = 'none';
     chatScreen.style.display = 'flex';
-    currentUserName.textContent = myName;
     document.getElementById('headerName').textContent = myName;
     document.getElementById('headerAvatar').src = 'https://api.dicebear.com/7.x/initials/svg?seed=' + encodeURIComponent(myName);
     listenMessages();
