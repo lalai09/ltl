@@ -465,7 +465,6 @@
   let byFirst = {};
 
   const BOT_NAME = '🤖 Bot Nối Từ';
-  const TIME_LIMIT = 15000; // 15 giây
 
   async function loadWordListFromFirebase() {
     try {
@@ -502,117 +501,15 @@
     console.log('Bot dictionary loaded:', WORD_LIST.length, 'words');
   }
 
-  // Game state (client-side, per user session)
-  let game = null; // { lastWord, used: Set, timer, startTs, chain: number }
-
-  // ========== BOT XÁO CHỮ (/botvtv) ==========
-  let scrambleGame = null; // { original, display, startTs, timer }
-  const SCRAMBLE_TIME_LIMIT = 30000; // 30 giây
-
-  function shuffleArray(arr) {
-    const a = arr.slice();
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
-  }
-
-  function scrambleWord(word) {
-    // Lấy từng ký tự (bỏ khoảng trắng) rồi xáo trộn, hiện dạng n/ă/n/ă/n
-    const chars = normalize(word).replace(/\s+/g, '').split('');
-    if (chars.length < 2) return null;
-    let scrambled = shuffleArray(chars);
-    // Tránh trùng hệt bản gốc (sau khi bỏ space)
-    const origJoined = chars.join('');
-    let tries = 0;
-    while (scrambled.join('') === origJoined && tries < 12) {
-      scrambled = shuffleArray(chars);
-      tries++;
-    }
-    return scrambled.join('/');
-  }
-
-  function clearScrambleTimer() {
-    if (scrambleGame && scrambleGame.timer) {
-      clearTimeout(scrambleGame.timer);
-      scrambleGame.timer = null;
-    }
-  }
-
-  function endScrambleGame() {
-    clearScrambleTimer();
-    scrambleGame = null;
-  }
-
-  function startScrambleGame() {
-    // /botvtv luôn bắt đầu ván mới
-    clearScrambleTimer();
-    scrambleGame = null;
-    // Huỷ luôn ván nối từ nếu đang chơi
-    clearGameTimer();
-    game = null;
-
-    if (!WORD_LIST.length) {
-      console.warn('Chưa có từ điển bot_words');
-      return;
-    }
-
-    // Ưu tiên từ có từ 3 ký tự trở lên (sau khi bỏ space)
-    let word = null;
-    for (let i = 0; i < 30; i++) {
-      const cand = pickRandomWord(new Set());
-      if (!cand) break;
-      const clean = normalize(cand).replace(/\s+/g, '');
-      if (clean.length >= 3) {
-        word = cand;
-        break;
-      }
-    }
-    if (!word) {
-      word = pickRandomWord(new Set());
-    }
-    if (!word) return;
-
-    const display = scrambleWord(word);
-    if (!display) return;
-
-    scrambleGame = {
-      original: normalize(word),
-      display: display,
-      startTs: Date.now(),
-      timer: null
-    };
-    postBot(`🔀 「${display}」`);
-    // Hết giờ: tắt im lặng
-    scrambleGame.timer = setTimeout(() => {
-      if (scrambleGame) endScrambleGame();
-    }, SCRAMBLE_TIME_LIMIT);
-  }
-
-  async function handleScrambleGuess(rawText) {
-    if (!scrambleGame || !myName) return false;
-    const text = normalize(rawText);
-    const orig = scrambleGame.original;
-    // Khớp cả có space lẫn không space
-    const textNoSpace = text.replace(/\s+/g, '');
-    const origNoSpace = orig.replace(/\s+/g, '');
-    if (text !== orig && textNoSpace !== origNoSpace) {
-      return false;
-    }
-
-    // ===== ĐÚNG =====
-    clearScrambleTimer();
-    const answered = scrambleGame.original;
-    scrambleGame = null;
-
-    // +10 xu
-    myXu += 10;
-    updateXuDisplay();
-    await saveXu();
-
-    return { correct: true, word: answered };
-  }
+  // ========== SHARED BOT GAMES (Firebase) ==========
+  // Ai trong chat cũng có thể trả lời challenge do người khác gọi
+  const challengeRef = db.ref('bot_challenge');
+  let currentChallenge = null; // cached from Firebase
+  let challengeTimer = null;
+  const NOITU_REWARD = 2;
+  const SCRAMBLE_REWARD = 5;
+  const NOITU_TIME_LIMIT = 15000;
+  const SCRAMBLE_TIME_LIMIT = 30000;
 
   function normalize(str) {
     return str.trim().toLowerCase().replace(/\s+/g, ' ');
@@ -653,85 +550,190 @@
     });
   }
 
-  function clearGameTimer() {
-    if (game && game.timer) {
-      clearTimeout(game.timer);
-      game.timer = null;
+  function shuffleArray(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function scrambleWord(word) {
+    const chars = normalize(word).replace(/\s+/g, '').split('');
+    if (chars.length < 2) return null;
+    let scrambled = shuffleArray(chars);
+    const origJoined = chars.join('');
+    let tries = 0;
+    while (scrambled.join('') === origJoined && tries < 12) {
+      scrambled = shuffleArray(chars);
+      tries++;
+    }
+    return scrambled.join('/');
+  }
+
+  function clearChallengeTimer() {
+    if (challengeTimer) {
+      clearTimeout(challengeTimer);
+      challengeTimer = null;
     }
   }
 
-  function endGame() {
-    clearGameTimer();
-    game = null;
+  function listenChallenge() {
+    challengeRef.on('value', (snap) => {
+      currentChallenge = snap.exists() ? snap.val() : null;
+    });
   }
 
-  function startTimer() {
-    clearGameTimer();
-    if (!game) return;
-    game.startTs = Date.now();
-    // Hết giờ: tắt game im lặng, không thông báo
-    game.timer = setTimeout(() => {
-      if (game) endGame();
-    }, TIME_LIMIT);
+  async function clearChallenge() {
+    clearChallengeTimer();
+    try {
+      await challengeRef.remove();
+    } catch (e) {
+      console.error('clearChallenge', e);
+    }
   }
 
-  function startBotGame() {
-    // /botnt luôn bắt đầu ván mới (huỷ ván cũ nếu còn)
-    clearGameTimer();
-    game = null;
-    endScrambleGame(); // huỷ xáo chữ nếu đang chơi
+  // Hết giờ: xóa challenge im lặng (chỉ client nào start mới set timeout)
+  function scheduleChallengeExpire(limitMs) {
+    clearChallengeTimer();
+    challengeTimer = setTimeout(async () => {
+      try {
+        const snap = await challengeRef.get();
+        if (snap.exists() && !snap.val().solved) {
+          await challengeRef.remove();
+        }
+      } catch (e) {}
+    }, limitMs);
+  }
 
+  async function startBotGame() {
     if (!WORD_LIST.length) {
-      // không spam lỗi — chỉ bỏ qua nếu chưa có từ điển
       console.warn('Chưa có từ điển bot_words');
       return;
     }
-
-    const used = new Set();
-    const first = pickRandomWord(used);
+    const first = pickRandomWord(new Set());
     if (!first) return;
 
-    used.add(first);
-    game = {
+    const payload = {
+      type: 'noitu',
       lastWord: first,
-      used: used,
-      timer: null,
-      startTs: Date.now(),
-      chain: 1
+      startedBy: myName || '?',
+      startedAt: Date.now(),
+      solved: false,
+      solvedBy: null
     };
-    // Chỉ hiện từ cần nối, không thêm thông tin
-    postBot(`「${first}」`);
-    startTimer();
+    try {
+      await challengeRef.set(payload);
+      postBot(`「${first}」`);
+      scheduleChallengeExpire(NOITU_TIME_LIMIT);
+    } catch (e) {
+      console.error('startBotGame', e);
+    }
   }
 
-  async function handlePlayerWord(rawText) {
-    if (!game || !myName) return false;
-    const text = normalize(rawText);
+  async function startScrambleGame() {
+    if (!WORD_LIST.length) {
+      console.warn('Chưa có từ điển bot_words');
+      return;
+    }
+    let word = null;
+    for (let i = 0; i < 30; i++) {
+      const cand = pickRandomWord(new Set());
+      if (!cand) break;
+      const clean = normalize(cand).replace(/\s+/g, '');
+      if (clean.length >= 3) {
+        word = cand;
+        break;
+      }
+    }
+    if (!word) word = pickRandomWord(new Set());
+    if (!word) return;
 
-    // Không phải từ 2 tiếng → coi như tin nhắn thường
-    if (!text.includes(' ') || text.split(' ').length !== 2) {
-      return false;
+    const display = scrambleWord(word);
+    if (!display) return;
+
+    const payload = {
+      type: 'scramble',
+      original: normalize(word),
+      display: display,
+      startedBy: myName || '?',
+      startedAt: Date.now(),
+      solved: false,
+      solvedBy: null
+    };
+    try {
+      await challengeRef.set(payload);
+      postBot(`🔀 「${display}」`);
+      scheduleChallengeExpire(SCRAMBLE_TIME_LIMIT);
+    } catch (e) {
+      console.error('startScrambleGame', e);
+    }
+  }
+
+  // Kiểm tra câu trả lời có khớp challenge hiện tại không (local check)
+  function isCorrectAnswer(ch, rawText) {
+    if (!ch || ch.solved) return false;
+    const text = normalize(rawText);
+    const limit = ch.type === 'scramble' ? SCRAMBLE_TIME_LIMIT : NOITU_TIME_LIMIT;
+    if (Date.now() - (ch.startedAt || 0) > limit) return false;
+
+    if (ch.type === 'noitu') {
+      if (!text.includes(' ') || text.split(' ').length !== 2) return false;
+      if (!wordSet.has(text)) return false;
+      const expected = getLastSyllable(ch.lastWord);
+      const actualFirst = text.split(' ')[0];
+      return actualFirst === expected;
     }
 
-    // Sai / không có trong từ điển / trùng / sai vần → im lặng, tin vẫn hiện như chat thường
-    if (!wordSet.has(text)) return false;
-    if (game.used.has(text)) return false;
-    const expected = getLastSyllable(game.lastWord);
-    const actualFirst = text.split(' ')[0];
-    if (actualFirst !== expected) return false;
+    if (ch.type === 'scramble') {
+      const orig = ch.original || '';
+      const textNoSpace = text.replace(/\s+/g, '');
+      const origNoSpace = orig.replace(/\s+/g, '');
+      return text === orig || textNoSpace === origNoSpace;
+    }
+    return false;
+  }
 
-    // ===== ĐÚNG =====
-    clearGameTimer();
-    game.used.add(text);
+  // Ai trả lời đúng trước (transaction) thì được điểm
+  async function tryClaimAnswer(rawText) {
+    if (!myName || !currentChallenge) return null;
+    if (!isCorrectAnswer(currentChallenge, rawText)) return null;
 
-    // +5 xu
-    myXu += 5;
+    const text = normalize(rawText);
+    const reward = currentChallenge.type === 'scramble' ? SCRAMBLE_REWARD : NOITU_REWARD;
+    const type = currentChallenge.type;
+    const displayWord = type === 'scramble' ? currentChallenge.original : text;
+
+    let claimed = false;
+    try {
+      const result = await challengeRef.transaction((cur) => {
+        if (!cur || cur.solved) return; // abort
+        if (!isCorrectAnswer(cur, rawText)) return; // abort (race)
+        cur.solved = true;
+        cur.solvedBy = myName;
+        cur.solvedAt = Date.now();
+        cur.answer = text;
+        return cur;
+      });
+      claimed = result.committed && result.snapshot.val() && result.snapshot.val().solvedBy === myName;
+    } catch (e) {
+      console.error('tryClaimAnswer', e);
+      return null;
+    }
+
+    if (!claimed) return null;
+
+    // Cộng xu cho người giải
+    myXu += reward;
     updateXuDisplay();
     await saveXu();
+    clearChallengeTimer();
 
-    game = null;
-    // Trả về object để sendMessage biết cần báo sau khi đã push tin user
-    return { correct: true, word: text };
+    // Xóa challenge sau một nhịp ngắn để bot kịp đăng tin
+    setTimeout(() => { challengeRef.remove().catch(() => {}); }, 800);
+
+    return { correct: true, word: displayWord, reward, type };
   }
 
   async function saveXu() {
@@ -843,6 +845,7 @@
     applyHeaderAvatar();
     updateXuDisplay();
     listenMessages();
+    listenChallenge(); // shared bot game state
     setupShop();
   }
 
@@ -860,9 +863,8 @@
   }
 
   function logout(){
-    clearGameTimer();
-    game = null;
-    endScrambleGame();
+    clearChallengeTimer();
+    currentChallenge = null;
     localStorage.removeItem(LS_KEY);
     myName = null;
     myXu = 0;
@@ -870,6 +872,7 @@
     myChatColor = '';
     myInv = { rename: 0, avatar: 0, color: 0 };
     messagesRef.off();
+    challengeRef.off();
     messagesDiv.innerHTML = '';
     chatScreen.style.display = 'none';
     loginScreen.style.display = 'flex';
@@ -971,7 +974,6 @@
     // Command /botnt — không hiện lệnh lên chat, chỉ bot ra từ
     if (lower === '/botnt' || lower === '/botnt ') {
       msgInput.value = '';
-      endScrambleGame(); // huỷ xáo chữ nếu đang chơi
       startBotGame();
       return;
     }
@@ -979,14 +981,13 @@
     // Command /botvtv — xáo trộn chữ cái
     if (lower === '/botvtv' || lower === '/botvtv ') {
       msgInput.value = '';
-      endGame(); // huỷ nối từ nếu đang chơi
       startScrambleGame();
       return;
     }
 
-    // If in scramble game, try guess first
-    if (scrambleGame) {
-      const result = await handleScrambleGuess(text);
+    // Thử trả lời challenge đang mở (ai cũng được)
+    if (currentChallenge && !currentChallenge.solved) {
+      const result = await tryClaimAnswer(text);
       if (result && result.correct) {
         const userPayload = {
           type: 'chat',
@@ -997,37 +998,12 @@
         if (myChatColor) userPayload.chatColor = myChatColor;
         if (myAvatar) userPayload.avatar = myAvatar;
         await messagesRef.push(userPayload);
-        await messagesRef.push({
-          type: 'chat',
-          sender: BOT_NAME,
-          text: `✅ ${myName} đã giải đúng!\n「${result.word}」\n+10 xu · Gõ /botvtv để chơi tiếp.`,
-          time: Date.now() + 1,
-          avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=BotNoiTu'
-        });
-        msgInput.value = '';
-        return;
-      }
-    }
 
-    // If in nối từ game, try to treat as answer first
-    if (game) {
-      const result = await handlePlayerWord(text);
-      if (result && result.correct) {
-        // 1) Đẩy tin user TRƯỚC
-        const userPayload = {
-          type: 'chat',
-          sender: myName,
-          text: text,
-          time: Date.now()
-        };
-        if (myChatColor) userPayload.chatColor = myChatColor;
-        if (myAvatar) userPayload.avatar = myAvatar;
-        await messagesRef.push(userPayload);
-        // 2) Sau đó mới bot báo đúng (time +1ms để chắc chắn sau)
+        const cmd = result.type === 'scramble' ? '/botvtv' : '/botnt';
         await messagesRef.push({
           type: 'chat',
           sender: BOT_NAME,
-          text: `✅ ${myName} đã trả lời đúng!\n「${result.word}」\nGõ /botnt để chơi tiếp.`,
+          text: `✅ ${myName} đã trả lời đúng!\n「${result.word}」\n+${result.reward} xu · Gõ ${cmd} để chơi tiếp.`,
           time: Date.now() + 1,
           avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=BotNoiTu'
         });
