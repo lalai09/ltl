@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Chat </title>
+<title>Chat Chung</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
@@ -158,6 +158,13 @@
     background:var(--success);
     box-shadow:0 0 8px var(--success);
   }
+  .headerAvatar{
+    width:32px; height:32px;
+    border-radius:50%;
+    object-fit:cover;
+    border:1px solid var(--border);
+    background:var(--panel2);
+  }
   header h2{
     font-size:17px;
     background:linear-gradient(90deg, var(--neon), var(--neon2));
@@ -310,7 +317,8 @@
   <header>
     <div class="title">
       <span class="dot"></span>
-      <h2>Phòng Chat Chung</h2>
+      <img id="headerAvatar" class="headerAvatar" src="" alt="avatar">
+      <h2 id="headerName"></h2>
     </div>
     <div class="userInfo">
       Xin chào, <b id="currentUserName"></b>
@@ -443,6 +451,8 @@
     loginScreen.style.display = 'none';
     chatScreen.style.display = 'flex';
     currentUserName.textContent = myName;
+    document.getElementById('headerName').textContent = myName;
+    document.getElementById('headerAvatar').src = 'https://api.dicebear.com/7.x/initials/svg?seed=' + encodeURIComponent(myName);
     listenMessages();
   }
 
