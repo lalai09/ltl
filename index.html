@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Chat Chung + Bot Nối Từ</title>
+<title>Chat </title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
@@ -599,7 +599,8 @@
       sender: BOT_NAME,
       text: text,
       time: Date.now(),
-      avatar: BOT_AVATAR
+      avatar: BOT_AVATAR,
+      fromBot: true
     });
   }
 
@@ -1000,7 +1001,9 @@
     }
 
     const isMine = m.sender === myName;
-    const isBot = m.sender === BOT_NAME;
+    // Nhận diện bot: cờ fromBot, hoặc tên chứa "Bot Nối Từ"
+    const isBot = !!(m.fromBot) || m.sender === BOT_NAME ||
+      (typeof m.sender === 'string' && m.sender.indexOf('Bot Nối Từ') !== -1);
     const row = document.createElement('div');
     row.className = 'msgRow ' + (isMine ? 'mine' : (isBot ? 'bot' : 'theirs'));
 
@@ -1026,6 +1029,20 @@
       '<div class="name">' + escapeHtml(m.sender) + '</div>' +
       '<div class="text">' + escapeHtml(m.text).replace(/\n/g, '<br>') + '</div>' +
       '<div class="time">' + formatTime(m.time) + '</div>';
+
+    // Ép khung neon cho bot (kể cả tin gửi từ admin)
+    if (isBot) {
+      div.style.borderColor = 'var(--neon)';
+      div.style.background = 'linear-gradient(135deg, rgba(0,229,255,0.14), rgba(124,77,255,0.22))';
+      div.style.boxShadow = '0 0 12px rgba(0,229,255,0.35), 0 0 28px rgba(124,77,255,0.18), inset 0 0 20px rgba(0,229,255,0.06)';
+      const nameEl = div.querySelector('.name');
+      if (nameEl) {
+        nameEl.style.color = 'var(--neon)';
+        nameEl.style.textShadow = '0 0 8px rgba(0,229,255,0.55)';
+      }
+      av.style.borderColor = 'var(--neon)';
+      av.style.boxShadow = '0 0 10px rgba(0,229,255,0.45)';
+    }
 
     const col = m.chatColor || (isMine ? myChatColor : '');
     if (col && !isBot) {
@@ -1148,7 +1165,8 @@
           sender: BOT_NAME,
           text: `✅ ${myName} đã trả lời đúng!\n「${result.word}」\n+${result.reward} xu · Gõ ${cmd} để chơi tiếp.`,
           time: Date.now() + 1,
-          avatar: BOT_AVATAR
+          avatar: BOT_AVATAR,
+          fromBot: true
         });
         msgInput.value = '';
         return;
