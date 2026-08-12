@@ -292,7 +292,7 @@
   let wordSet = new Set();
   let byFirst = {};
 
-  const BOT_NAME = '🤖 Bot Nối Từ';
+  const BOT_NAME = '🤖 Bot';
   const TIME_LIMIT = 15000; // 15 giây
 
   async function loadWordListFromFirebase() {
@@ -300,10 +300,15 @@
       const snap = await db.ref('bot_words').get();
       if (snap.exists()) {
         const val = snap.val();
+        const norm = (s) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
         if (Array.isArray(val)) {
-          WORD_LIST = val.map(w => (w || '').trim().toLowerCase().replace(/\s+/g, ' ')).filter(Boolean);
+          WORD_LIST = val.map(norm).filter(Boolean);
         } else {
-          WORD_LIST = Object.keys(val).map(w => w.trim().toLowerCase().replace(/\s+/g, ' ')).filter(Boolean);
+          // Support { word: true } OR { safeKey: "actual word" }
+          WORD_LIST = Object.entries(val).map(([k, v]) => {
+            if (typeof v === 'string' && v.trim()) return norm(v);
+            return norm(k);
+          }).filter(Boolean);
         }
         WORD_LIST = [...new Set(WORD_LIST)];
       } else {
