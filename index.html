@@ -195,6 +195,21 @@
   #sendBtn:hover{filter:brightness(1.15); transform:scale(1.05);}
   #sendBtn svg{width:20px; height:20px; fill:#04101a;}
 
+  
+  .msgRow{
+    display:flex; align-items:flex-end; gap:8px;
+    max-width:85%;
+    animation:fadeIn 0.2s ease;
+  }
+  .msgRow.mine{ align-self:flex-end; flex-direction:row-reverse; }
+  .msgRow.theirs, .msgRow.bot{ align-self:flex-start; }
+  .msgAvatar{
+    width:32px; height:32px; border-radius:50%;
+    object-fit:cover; flex-shrink:0;
+    border:1px solid var(--border); background:var(--panel2);
+  }
+  .msgRow .msg{ max-width:100%; }
+
   @media(max-width:480px){
     .msg{max-width:85%;}
     header h2{font-size:15px;}
@@ -516,7 +531,8 @@
       type: 'chat',
       sender: BOT_NAME,
       text: text,
-      time: Date.now()
+      time: Date.now(),
+      avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=BotNoiTu'
     });
   }
 
@@ -772,30 +788,53 @@
   }
 
   function renderMessage(m){
-    const div = document.createElement('div');
     if(m.type === 'system'){
+      const div = document.createElement('div');
       div.className = 'msg system';
       div.textContent = m.text;
-    } else {
-      const isMine = m.sender === myName;
-      const isBot = m.sender === BOT_NAME;
-      div.className = 'msg ' + (isMine ? 'mine' : (isBot ? 'bot' : 'theirs'));
-      div.innerHTML =
-        '<div class="name">' + escapeHtml(m.sender) + '</div>' +
-        '<div class="text">' + escapeHtml(m.text).replace(/\n/g, '<br>') + '</div>' +
-        '<div class="time">' + formatTime(m.time) + '</div>';
-      // Màu chat custom (lưu trên tin nhắn hoặc của mình)
-      const col = m.chatColor || (isMine ? myChatColor : '');
-      if (col && !isBot) {
-        div.style.borderColor = col;
-        div.style.background = isMine
-          ? `linear-gradient(135deg, ${hexToRgba(col,0.22)}, ${hexToRgba(col,0.12)})`
-          : `linear-gradient(135deg, ${hexToRgba(col,0.18)}, var(--panel2))`;
-        const nameEl = div.querySelector('.name');
-        if (nameEl) nameEl.style.color = col;
-      }
+      messagesDiv.appendChild(div);
+      return;
     }
-    messagesDiv.appendChild(div);
+
+    const isMine = m.sender === myName;
+    const isBot = m.sender === BOT_NAME;
+    const row = document.createElement('div');
+    row.className = 'msgRow ' + (isMine ? 'mine' : (isBot ? 'bot' : 'theirs'));
+
+    const av = document.createElement('img');
+    av.className = 'msgAvatar';
+    av.alt = 'avt';
+    if (isBot) {
+      av.src = 'https://api.dicebear.com/7.x/bottts/svg?seed=BotNoiTu';
+    } else if (m.avatar) {
+      av.src = m.avatar;
+    } else if (isMine && myAvatar) {
+      av.src = myAvatar;
+    } else {
+      av.src = defaultAvatarUrl(m.sender || 'user');
+    }
+    av.onerror = function(){ this.src = defaultAvatarUrl(m.sender || 'user'); };
+
+    const div = document.createElement('div');
+    div.className = 'msg ' + (isMine ? 'mine' : (isBot ? 'bot' : 'theirs'));
+    div.innerHTML =
+      '<div class="name">' + escapeHtml(m.sender) + '</div>' +
+      '<div class="text">' + escapeHtml(m.text).replace(/\n/g, '<br>') + '</div>' +
+      '<div class="time">' + formatTime(m.time) + '</div>';
+
+    const col = m.chatColor || (isMine ? myChatColor : '');
+    if (col && !isBot) {
+      div.style.borderColor = col;
+      div.style.background = isMine
+        ? `linear-gradient(135deg, ${hexToRgba(col,0.22)}, ${hexToRgba(col,0.12)})`
+        : `linear-gradient(135deg, ${hexToRgba(col,0.18)}, var(--panel2))`;
+      const nameEl = div.querySelector('.name');
+      if (nameEl) nameEl.style.color = col;
+    }
+
+    row.appendChild(av);
+    row.appendChild(div);
+    messagesDiv.appendChild(row);
   }
 
   function hexToRgba(hex, a){
@@ -835,13 +874,15 @@
           time: Date.now()
         };
         if (myChatColor) userPayload.chatColor = myChatColor;
+        if (myAvatar) userPayload.avatar = myAvatar;
         await messagesRef.push(userPayload);
         // 2) Sau đó mới bot báo đúng (time +1ms để chắc chắn sau)
         await messagesRef.push({
           type: 'chat',
           sender: BOT_NAME,
           text: `✅ ${myName} đã trả lời đúng!\n「${result.word}」\nGõ /botnt để chơi tiếp.`,
-          time: Date.now() + 1
+          time: Date.now() + 1,
+          avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=BotNoiTu'
         });
         msgInput.value = '';
         return;
@@ -856,6 +897,7 @@
       time: Date.now()
     };
     if (myChatColor) payload.chatColor = myChatColor;
+    if (myAvatar) payload.avatar = myAvatar;
     messagesRef.push(payload);
     msgInput.value = '';
   }
