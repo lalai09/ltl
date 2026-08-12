@@ -614,16 +614,9 @@
     const text = msgInput.value.trim();
     if(!text || !myName) return;
 
-    // Command /botnt
+    // Command /botnt — không hiện lệnh lên chat, chỉ bot ra từ
     if (text.toLowerCase() === '/botnt' || text.toLowerCase() === '/botnt ') {
       msgInput.value = '';
-      // Also push the command as user message so others see
-      messagesRef.push({
-        type: 'chat',
-        sender: myName,
-        text: text,
-        time: Date.now()
-      });
       startBotGame();
       return;
     }
