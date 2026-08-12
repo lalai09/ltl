@@ -1014,27 +1014,34 @@
   // ========== CHỐNG SPAM ==========
   let lastSendAt = 0;
   let lastSendText = '';
-  const SPAM_COOLDOWN_MS = 1500;      // tối thiểu 1.5s giữa 2 tin
+  const SPAM_COOLDOWN_MS = 1000;      // tối thiểu 1s giữa 2 tin
   const SPAM_SAME_COOLDOWN_MS = 5000; // tin trùng phải cách 5s
   let spamWarnAt = 0;
 
+  // Chỉ hiện với chính người spam (không đẩy lên chat chung)
   function showSpamWarn(msg) {
     const now = Date.now();
-    // Không spam cả cảnh báo
-    if (now - spamWarnAt < 1200) return;
+    if (now - spamWarnAt < 1000) return;
     spamWarnAt = now;
-    postSystem(msg);
+    const div = document.createElement('div');
+    div.className = 'msg system';
+    div.textContent = msg;
+    messagesDiv.appendChild(div);
+    scrollToBottom();
+    setTimeout(() => {
+      if (div.parentNode) div.parentNode.removeChild(div);
+    }, 2500);
   }
 
   function checkSpam(text) {
     const now = Date.now();
     const gap = now - lastSendAt;
     if (gap < SPAM_COOLDOWN_MS) {
-      showSpamWarn('⏳ Gửi chậm thôi, đợi ' + Math.ceil((SPAM_COOLDOWN_MS - gap) / 1000) + 's nữa.');
+      showSpamWarn('⏳ Gửi chậm thôi.');
       return true;
     }
     if (text === lastSendText && gap < SPAM_SAME_COOLDOWN_MS) {
-      showSpamWarn('⏳ Đừng gửi trùng tin nhắn liên tục.');
+      showSpamWarn('⏳ Gửi chậm thôi.');
       return true;
     }
     return false;
@@ -1074,7 +1081,7 @@
     if (currentChallenge && !currentChallenge.solved) {
       const now = Date.now();
       if (now - lastSendAt < 600) {
-        showSpamWarn('⏳ Chậm lại một chút.');
+        showSpamWarn('⏳ Gửi chậm thôi.');
         return;
       }
       const result = await tryClaimAnswer(text);
