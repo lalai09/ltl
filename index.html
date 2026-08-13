@@ -145,6 +145,14 @@
     color:var(--success); padding:4px 10px; border-radius:20px;
     font-size:12px; font-weight:700;
   }
+  .tienLenBtn{
+    background:linear-gradient(90deg, #ffd54f, #ff9800);
+    color:#3a2a00; padding:6px 12px; border-radius:20px;
+    font-size:12px; font-weight:700; white-space:nowrap;
+    display:flex; align-items:center; gap:4px; transition:0.2s;
+    box-shadow:0 0 10px rgba(255,152,0,0.35);
+  }
+  .tienLenBtn:hover{ filter:brightness(1.1); transform:translateY(-1px) scale(1.03); }
   .botBudgeBadge{
     background:rgba(124,77,255,0.15); border:1px solid var(--neon2);
     color:var(--neon2); padding:4px 10px; border-radius:20px;
@@ -399,6 +407,53 @@
   .promptOk{ background:linear-gradient(90deg, var(--neon), var(--neon2)); color:#04101a; }
   .promptCancel{ background:transparent; border:1px solid var(--border)!important; color:var(--text); }
 
+  /* poll create modal */
+  #pollCreateOverlay{
+    display:none; position:fixed; inset:0; z-index:1100;
+    background:rgba(0,0,0,0.7); align-items:center; justify-content:center; padding:16px;
+  }
+  #pollCreateOverlay.open{ display:flex; }
+  .pollCreateBox{ max-width:400px; }
+  .pollCreateBox input[type=text]{
+    width:100%; padding:11px 12px; margin-bottom:10px;
+    background:#0b1220; border:1px solid var(--border); border-radius:10px;
+    color:var(--text); font-size:14px; outline:none;
+  }
+  .pollCreateBox input[type=text]:focus{ border-color:var(--neon); }
+  #pollQuestionInput{ font-weight:700; margin-bottom:14px; }
+  .pollAddOptionBtn{
+    width:100%; padding:9px; border-radius:8px; margin-top:2px;
+    background:transparent; border:1px dashed var(--border); color:var(--muted);
+    cursor:pointer; font-size:13px;
+  }
+  .pollAddOptionBtn:hover{ border-color:var(--neon2); color:var(--neon2); }
+
+  /* poll trong chat */
+  .pollCard{
+    background:var(--panel2); border:1px solid var(--neon2); border-radius:14px;
+    padding:14px; max-width:320px;
+    box-shadow:0 0 14px rgba(124,77,255,0.2);
+  }
+  .pollCard .pollQ{ font-weight:700; font-size:14.5px; margin-bottom:10px; color:var(--text); }
+  .pollOption{
+    position:relative; margin-bottom:8px; padding:9px 12px; border-radius:10px;
+    background:#0b1220; border:1px solid var(--border); cursor:pointer;
+    overflow:hidden; transition:0.15s;
+  }
+  .pollOption:hover{ border-color:var(--neon2); }
+  .pollOption.voted{ border-color:var(--neon); cursor:default; }
+  .pollOption .pollBar{
+    position:absolute; left:0; top:0; bottom:0;
+    background:linear-gradient(90deg, rgba(0,229,255,0.22), rgba(124,77,255,0.22));
+    z-index:0; transition:width 0.3s ease;
+  }
+  .pollOption .pollLabel{
+    position:relative; z-index:1; display:flex; justify-content:space-between;
+    font-size:13px; gap:8px;
+  }
+  .pollOption .pollPct{ color:var(--muted); font-weight:700; flex-shrink:0; }
+  .pollTotal{ font-size:11px; color:var(--muted); margin-top:4px; text-align:right; }
+
 </style>
 </head>
 <body>
@@ -437,12 +492,14 @@
         <img id="headerAvatar" class="headerAvatar" src="" alt="avatar" title="Bấm để mở menu">
         <div class="avatarMenu" id="avatarMenu">
           <button type="button" class="logoutBtn" id="resetPassBtn" style="display:none;">🔑 Reset mật khẩu</button>
+          <button type="button" class="logoutBtn" id="createPollBtn" style="display:none;">🗳️ Tạo bình chọn</button>
           <button type="button" class="logoutBtn" id="logoutBtn">🚪 Đăng xuất</button>
         </div>
       </div>
       <h2 id="headerName"></h2>
     </div>
     <div class="userInfo">
+      <button type="button" class="tienLenBtn" id="tienLenBtn" title="Chơi Tiến Lên Miền Nam (dùng chung tài khoản)">🃏 Tiến Lên</button>
       <span class="botBudgeBadge" id="botBudgeDisplay" title="Xu thưởng bot còn lại hôm nay">🤖 100/100</span>
       <span class="xuBadge" id="xuDisplay">💰 0 xu</span>
     </div>
@@ -575,6 +632,23 @@
     <div class="btnRow">
       <button type="button" class="promptCancel" id="promptCancelBtn">Huỷ</button>
       <button type="button" class="promptOk" id="promptOkBtn">Xác nhận</button>
+    </div>
+  </div>
+</div>
+
+<!-- TẠO BÌNH CHỌN (admin) -->
+<div id="pollCreateOverlay">
+  <div class="promptBox pollCreateBox">
+    <h3>🗳️ Tạo bình chọn</h3>
+    <input type="text" id="pollQuestionInput" placeholder="Câu hỏi bình chọn..." maxlength="120">
+    <div id="pollOptionsWrap">
+      <input type="text" class="pollOptionInput" placeholder="Lựa chọn 1" maxlength="60">
+      <input type="text" class="pollOptionInput" placeholder="Lựa chọn 2" maxlength="60">
+    </div>
+    <button type="button" class="pollAddOptionBtn" id="pollAddOptionBtn">+ Thêm lựa chọn</button>
+    <div class="btnRow" style="margin-top:14px;">
+      <button type="button" class="promptCancel" id="pollCancelBtn">Huỷ</button>
+      <button type="button" class="promptOk" id="pollSubmitBtn">Tạo bình chọn</button>
     </div>
   </div>
 </div>
@@ -1423,12 +1497,123 @@
       const m = snap.val();
       const wasNearBottom = isNearBottom();
       const isOwnMsg = m && m.sender === myName;
-      renderMessage(m);
+      renderMessage(m, snap.key);
       // Chỉ tự cuộn xuống nếu người dùng đang ở gần cuối, hoặc đây là tin nhắn của chính mình
       if (wasNearBottom || isOwnMsg) {
         scrollToBottom();
       }
     });
+    // Cập nhật số phiếu bầu real-time cho các poll đang hiển thị
+    messagesRef.limitToLast(100).on('child_changed', (snap) => {
+      const m = snap.val();
+      if (m && m.type === 'poll') {
+        updatePollCardVotes(snap.key, m);
+      }
+    });
+  }
+
+  // ========== BÌNH CHỌN NHANH (POLL) — chỉ hungw tạo được ==========
+  function createPollMessage(question, options) {
+    const votes = {};
+    options.forEach((_, i) => { votes[i] = {}; }); // { optionIndex: { voterKey: name } }
+    return messagesRef.push({
+      type: 'poll',
+      question: question,
+      options: options,
+      votes: votes,
+      createdBy: myName || '?',
+      time: Date.now()
+    });
+  }
+
+  async function votePoll(pollKey, m, optionIndex) {
+    if (!myName) return;
+    const voterKey = toKey(myName);
+    // Kiểm tra đã bình chọn chưa (bất kỳ lựa chọn nào)
+    const votes = m.votes || {};
+    const alreadyVoted = Object.keys(votes).some(idx => votes[idx] && votes[idx][voterKey]);
+    if (alreadyVoted) return;
+    try {
+      await messagesRef.child(pollKey).child('votes').child(String(optionIndex)).child(voterKey).set(myName);
+    } catch (e) {
+      console.error('votePoll', e);
+    }
+  }
+
+  function pollTotalVotes(m) {
+    const votes = m.votes || {};
+    let total = 0;
+    Object.keys(votes).forEach(idx => {
+      total += Object.keys(votes[idx] || {}).length;
+    });
+    return total;
+  }
+
+  function pollMyVoteIndex(m) {
+    if (!myName) return -1;
+    const voterKey = toKey(myName);
+    const votes = m.votes || {};
+    for (const idx of Object.keys(votes)) {
+      if (votes[idx] && votes[idx][voterKey]) return parseInt(idx, 10);
+    }
+    return -1;
+  }
+
+  function renderPollMessage(m, pollKey) {
+    const row = document.createElement('div');
+    row.className = 'msgRow theirs';
+    row.dataset.pollRow = '1';
+
+    const av = document.createElement('img');
+    av.className = 'msgAvatar';
+    av.alt = 'avt';
+    av.src = defaultAvatarUrl(m.createdBy || 'poll');
+    av.onerror = function(){ this.src = defaultAvatarUrl('poll'); };
+
+    const card = document.createElement('div');
+    card.className = 'pollCard';
+    card.dataset.pollKey = pollKey || '';
+    row.appendChild(av);
+    row.appendChild(card);
+    messagesDiv.appendChild(row);
+
+    fillPollCard(card, m);
+  }
+
+  function fillPollCard(card, m) {
+    const total = pollTotalVotes(m);
+    const myVote = pollMyVoteIndex(m);
+    card.innerHTML = '';
+
+    const qEl = document.createElement('div');
+    qEl.className = 'pollQ';
+    qEl.textContent = '🗳️ ' + m.question;
+    card.appendChild(qEl);
+
+    (m.options || []).forEach((opt, i) => {
+      const count = m.votes && m.votes[i] ? Object.keys(m.votes[i]).length : 0;
+      const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+      const optEl = document.createElement('div');
+      optEl.className = 'pollOption' + (myVote === i ? ' voted' : '');
+      optEl.innerHTML =
+        '<div class="pollBar" style="width:' + pct + '%"></div>' +
+        '<div class="pollLabel"><span>' + (myVote === i ? '✅ ' : '') + escapeHtml(opt) + '</span>' +
+        '<span class="pollPct">' + pct + '% (' + count + ')</span></div>';
+      if (myVote === -1) {
+        optEl.addEventListener('click', () => votePoll(card.dataset.pollKey, m, i));
+      }
+      card.appendChild(optEl);
+    });
+
+    const totalEl = document.createElement('div');
+    totalEl.className = 'pollTotal';
+    totalEl.textContent = total + ' lượt bình chọn';
+    card.appendChild(totalEl);
+  }
+
+  function updatePollCardVotes(pollKey, m) {
+    const card = messagesDiv.querySelector('.pollCard[data-poll-key="' + pollKey + '"]');
+    if (card) fillPollCard(card, m);
   }
 
   function renderMessage(m){
@@ -1437,6 +1622,11 @@
       div.className = 'msg system';
       div.textContent = m.text;
       messagesDiv.appendChild(div);
+      return;
+    }
+
+    if(m.type === 'poll'){
+      renderPollMessage(m);
       return;
     }
 
@@ -1974,6 +2164,13 @@
       alert('Lỗi: ' + e.message);
     }
   }
+
+  document.getElementById('tienLenBtn').addEventListener('click', () => {
+    if (!myName) return;
+    const url = 'tienlen' + encodeURIComponent(myName) +
+                '&uid=' + encodeURIComponent(toKey(myName));
+    window.open(url, '_blank');
+  });
 
   botntQuickBtn.addEventListener('click', () => {
     if (!myName) return;
