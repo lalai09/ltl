@@ -783,6 +783,7 @@
       avatar: BOT_AVATAR,
       fromBot: true
     });
+    pruneOldMessages();
   }
 
   function postSystem(text) {
@@ -791,6 +792,31 @@
       text: text,
       time: Date.now()
     });
+  }
+
+  // ========== TỰ ĐỘNG DỌN TIN NHẮN CŨ (giữ tối đa 200 tin gần nhất) ==========
+  const MAX_MESSAGES = 200;
+  let isPruning = false;
+
+  async function pruneOldMessages() {
+    if (isPruning) return;
+    isPruning = true;
+    try {
+      const snap = await messagesRef.orderByKey().get();
+      if (!snap.exists()) return;
+      const keys = [];
+      snap.forEach(child => { keys.push(child.key); });
+      if (keys.length <= MAX_MESSAGES) return;
+      const toRemoveCount = keys.length - MAX_MESSAGES;
+      const removeKeys = keys.slice(0, toRemoveCount);
+      const updates = {};
+      removeKeys.forEach(k => { updates[k] = null; });
+      await messagesRef.update(updates);
+    } catch (e) {
+      console.error('pruneOldMessages', e);
+    } finally {
+      isPruning = false;
+    }
   }
 
   function shuffleArray(arr) {
@@ -1487,6 +1513,7 @@
           fromBot: true
         });
         msgInput.value = '';
+        pruneOldMessages();
         return;
       }
     }
@@ -1506,6 +1533,7 @@
     messagesRef.push(payload);
     markSent(text);
     msgInput.value = '';
+    pruneOldMessages();
   }
 
 
