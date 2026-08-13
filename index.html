@@ -336,7 +336,7 @@
       </div>
       <div class="field">
         <label>Mật khẩu</label>
-        <input type="password" id="password" name="ntf_pass_field" placeholder="Nhập mật khẩu" maxlength="30" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false">
+        <input type="text" id="password" name="ntf_pass_field" placeholder="Nhập mật khẩu" maxlength="30" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="-webkit-text-security:disc; text-security:disc;">
       </div>
 
       <div class="btnRow">
@@ -478,6 +478,33 @@
   const sendBtn = document.getElementById('sendBtn');
   const logoutBtn = document.getElementById('logoutBtn');
   const xuDisplay = document.getElementById('xuDisplay');
+
+  // Fallback che mật khẩu bằng JS cho trình duyệt không hỗ trợ -webkit-text-security
+  (function setupMaskedPasswordInput(){
+    let realPass = '';
+    const MASK = '•';
+    passwordInput.addEventListener('input', (e) => {
+      const val = passwordInput.value;
+      const prevLen = realPass.length;
+      const curLen = val.length;
+      if (curLen > prevLen) {
+        // Ký tự mới gõ luôn nằm ở cuối chuỗi hiển thị (do không hỗ trợ paste giữa)
+        const added = val.slice(prevLen);
+        realPass += added.split('').filter(ch => ch !== MASK).join('') || added;
+      } else {
+        realPass = realPass.slice(0, curLen);
+      }
+      passwordInput.value = MASK.repeat(realPass.length);
+      passwordInput.dataset.real = realPass;
+    });
+    passwordInput.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text');
+      realPass += text;
+      passwordInput.value = MASK.repeat(realPass.length);
+      passwordInput.dataset.real = realPass;
+    });
+  })();
 
   let myName = null;
   let myXu = 0;
@@ -971,7 +998,7 @@
 
   async function register(){
     const name = usernameInput.value.trim();
-    const pass = passwordInput.value;
+    const pass = passwordInput.dataset.real || '';
     if(!name || !pass){ showMsg('Vui lòng nhập đầy đủ tên và mật khẩu'); return; }
     if(name.length < 2){ showMsg('Tên đăng nhập quá ngắn'); return; }
     if(pass.length < 3){ showMsg('Mật khẩu phải từ 3 ký tự trở lên'); return; }
@@ -1002,7 +1029,7 @@
 
   async function login(){
     const name = usernameInput.value.trim();
-    const pass = passwordInput.value;
+    const pass = passwordInput.dataset.real || '';
     if(!name || !pass){ showMsg('Vui lòng nhập đầy đủ tên và mật khẩu'); return; }
 
     setLoading(true);
@@ -1101,6 +1128,7 @@
     loginScreen.style.display = 'flex';
     usernameInput.value = '';
     passwordInput.value = '';
+    passwordInput.dataset.real = '';
     loginMsg.textContent = '';
   }
 
