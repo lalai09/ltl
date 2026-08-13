@@ -1053,15 +1053,14 @@
     const payload = {
       lastWord: first,
       usedWords: { [first]: true },
-      queue: [myName || '?'],      // hàng đợi người chơi theo thứ tự tham gia
-      turnIndex: 0,                 // ai đang tới lượt (index trong queue)
       turnStartedAt: Date.now(),
       finished: false,
-      startedBy: myName || '?'
+      startedBy: myName || '?',
+      lastSolver: null
     };
     try {
       await turnGameRef.set(payload);
-      postBot(`🔁 Nối từ theo lượt bắt đầu!\n「${first}」\nĐến lượt: ${payload.queue[0]} (10s)`);
+      postBot(`🔁 Nối từ chung bắt đầu (ai cũng chơi được)!\n「${first}」\nAi nối đúng trước trong 10s thì thắng lượt đó!`);
       scheduleTurnExpire();
     } catch (e) {
       console.error('startTurnGame', e);
@@ -1075,9 +1074,10 @@
     }, TURN_TIME_LIMIT);
   }
 
-  // Hết 10s không ai nối được lượt hiện tại -> chuyển về người đầu tiên nối tiếp
-  // Nếu người đầu tiên (đang ở turnIndex 0 sau khi reset) cũng không nối được nữa (hết giờ tiếp)
-  // thì bot sẽ tự chuyển dần sang người kế tiếp trong hàng đợi cho tới khi có ai nối được hoặc hết hàng đợi.
+  const TURN_MAX_MISSES = 3; // hết giờ liên tiếp bao nhiêu lần (không ai nối được) thì kết thúc ván
+
+  // Hết 10s không ai nối được -> thông báo hết giờ, từ hiện tại vẫn giữ nguyên để ai cũng có thể nối tiếp thêm 10s nữa.
+  // Sau TURN_MAX_MISSES lần liên tiếp không ai nối được thì kết thúc ván.
   async function handleTurnTimeout() {
     try {
       const snap = await turnGameRef.get();
@@ -1087,45 +1087,19 @@
       // Đã hết giờ thật sự chưa (tránh race với người vừa nối đúng)
       if (Date.now() - (g.turnStartedAt || 0) < TURN_TIME_LIMIT - 50) return;
 
-      const queue = g.queue || [];
-      if (!queue.length) {
+      const misses = (g.missCount || 0) + 1;
+      if (misses >= TURN_MAX_MISSES) {
         await turnGameRef.update({ finished: true });
-        postBot('⏰ Không còn ai trong hàng đợi. Ván nối từ theo lượt kết thúc.');
+        postBot(`⏰ Hết giờ! Không ai nối được từ 「${g.lastWord}」 sau ${TURN_MAX_MISSES} lượt liên tiếp.\nVán nối từ chung kết thúc.`);
         setTimeout(() => { turnGameRef.remove().catch(() => {}); }, 800);
         return;
       }
 
-      // Nếu đây là lần timeout đầu tiên của vòng (turnIndex đang ở người đang lượt bình thường)
-      // -> quay về người đầu tiên (index 0) để họ nối tiếp
-      if (!g.awaitingFirstRetry) {
-        const firstPlayer = queue[0];
-        await turnGameRef.update({
-          turnIndex: 0,
-          turnStartedAt: Date.now(),
-          awaitingFirstRetry: true
-        });
-        postBot(`⏰ Hết giờ! Không ai nối được từ 「${g.lastWord}」.\n↩️ Quay về lượt của ${firstPlayer} để nối tiếp (10s).`);
-        scheduleTurnExpire();
-        return;
-      }
-
-      // Người đầu tiên cũng không nối được -> chuyển dần sang người kế tiếp trong hàng đợi
-      let nextIndex = (g.turnIndex || 0) + 1;
-      if (nextIndex >= queue.length) {
-        // Hết hàng đợi mà không ai nối được -> kết thúc ván
-        await turnGameRef.update({ finished: true });
-        postBot(`⏰ Hết giờ! Cả hàng đợi đều không nối được từ 「${g.lastWord}」.\nVán nối từ theo lượt kết thúc.`);
-        setTimeout(() => { turnGameRef.remove().catch(() => {}); }, 800);
-        return;
-      }
-
-      const nextPlayer = queue[nextIndex];
       await turnGameRef.update({
-        turnIndex: nextIndex,
         turnStartedAt: Date.now(),
-        awaitingFirstRetry: false
+        missCount: misses
       });
-      postBot(`⏰ ${queue[g.turnIndex]} chưa nối kịp.\n➡️ Chuyển lượt cho ${nextPlayer} (10s).`);
+      postBot(`⏰ Hết giờ! Chưa ai nối được từ 「${g.lastWord}」.\n♻️ Vẫn còn ${TURN_MAX_MISSES - misses} lượt nữa — ai cũng có thể nối tiếp (10s)!`);
       scheduleTurnExpire();
     } catch (e) {
       console.error('handleTurnTimeout', e);
@@ -1144,48 +1118,30 @@
     return actualFirst === expected;
   }
 
-  // Ai đang đúng lượt mới được tính điểm; nếu đang trong pha "quay về người đầu" thì chỉ người đầu mới được tính
-  function isMyTurn(g) {
-    const queue = g.queue || [];
-    const idx = g.turnIndex || 0;
-    if (idx < 0 || idx >= queue.length) return false;
-    return queue[idx] === myName;
-  }
-
+  // Bất kỳ ai trong phòng cũng được quyền nối — ai gõ đúng trước (transaction) thì thắng lượt đó
   async function tryClaimTurnAnswer(rawText) {
     if (!myName || !currentTurnGame) return null;
-    if (!isMyTurn(currentTurnGame)) return null;
     if (!isValidTurnAnswer(currentTurnGame, rawText)) return null;
 
     const text = normalize(rawText);
     let claimed = false;
-    let resultQueue = [];
-    let wasNewPlayer = false;
 
     try {
       const result = await turnGameRef.transaction((cur) => {
         if (!cur || cur.finished) return; // abort
         if (!isValidTurnAnswer(cur, rawText)) return; // abort (race)
-        const queue = (cur.queue || []).slice();
-        const idx = cur.turnIndex || 0;
-        if (queue[idx] !== myName) return; // abort — không đúng lượt (race)
 
         cur.lastWord = text;
         cur.usedWords = cur.usedWords || {};
         cur.usedWords[text] = true;
-        cur.awaitingFirstRetry = false;
         cur.turnStartedAt = Date.now();
-
-        // Chuyển sang người kế tiếp trong hàng đợi (vòng tròn)
-        let nextIdx = idx + 1;
-        if (nextIdx >= queue.length) nextIdx = 0;
-        cur.turnIndex = nextIdx;
+        cur.missCount = 0; // reset đếm hết giờ liên tiếp khi có người nối được
+        cur.lastSolver = myName; // ai vừa nối được từ này
         return cur;
       });
       if (result.committed && result.snapshot.exists()) {
         const val = result.snapshot.val();
-        claimed = (val.usedWords || {})[text] === true && val.lastWord === text;
-        resultQueue = val.queue || [];
+        claimed = (val.usedWords || {})[text] === true && val.lastWord === text && val.lastSolver === myName;
       }
     } catch (e) {
       console.error('tryClaimTurnAnswer', e);
@@ -1201,28 +1157,14 @@
     clearTurnGameTimer();
     scheduleTurnExpire();
 
-    return { correct: true, word: text, reward: TURN_REWARD, queue: resultQueue };
+    return { correct: true, word: text, reward: TURN_REWARD };
   }
 
-  // Người mới gõ /botchandi khi ván đang chạy -> tham gia thêm vào cuối hàng đợi
+  // Nếu ván đang chạy, ai gõ /botchandi cũng chỉ là xác nhận tham gia — không có hàng đợi riêng nữa
   async function joinTurnGame() {
     if (!myName || !currentTurnGame || currentTurnGame.finished) return false;
-    const queue = currentTurnGame.queue || [];
-    if (queue.includes(myName)) return true; // đã ở trong hàng đợi rồi
-    try {
-      await turnGameRef.transaction((cur) => {
-        if (!cur || cur.finished) return;
-        const q = cur.queue || [];
-        if (!q.includes(myName)) q.push(myName);
-        cur.queue = q;
-        return cur;
-      });
-      postBot(`➕ ${myName} đã tham gia hàng đợi nối từ theo lượt.`);
-      return true;
-    } catch (e) {
-      console.error('joinTurnGame', e);
-      return false;
-    }
+    postBot(`➕ ${myName} đã tham gia! Ai cũng có thể nối từ「${currentTurnGame.lastWord}」.`);
+    return true;
   }
 
   // ========== NGÂN SÁCH XU THƯỞNG CỦA BOT (giới hạn theo ngày) ==========
@@ -2202,43 +2144,33 @@
       return;
     }
 
-    // Thử trả lời ván nối từ theo lượt (chỉ người đúng lượt mới được tính)
+    // Thử trả lời ván nối từ chung — ai cũng được chơi, ai nối đúng & nhanh nhất trước thì thắng
     // Chỉ người trả lời đúng & nhanh nhất mới được đẩy lên khung chat — không hiện tin nháp/sai/trễ của ai khác
     if (currentTurnGame && !currentTurnGame.finished && isTurnGameActive()) {
-      if (isMyTurn(currentTurnGame)) {
-        const now = Date.now();
-        if (now - lastSendAt < 600) {
-          showSpamWarn('⏳ Gửi chậm thôi.');
-          return;
-        }
-        const tresult = await tryClaimTurnAnswer(text);
-        if (tresult && tresult.correct) {
-          markSent(text);
-
-          const q = tresult.queue || [];
-          const nextIdx = q.length ? (q.indexOf(myName) + 1) % q.length : 0;
-          const nextPlayer = q.length ? q[nextIdx] : '?';
-          // Gộp tên người thắng + từ nối vào 1 tin của bot, không push tin nhắn riêng của người chơi
-          await messagesRef.push({
-            type: 'chat',
-            sender: BOT_NAME,
-            text: `✅ ${myName} nối đúng!\n「${tresult.word}」\n+${tresult.reward} xu.\n➡️ Đến lượt: ${nextPlayer} (10s)`,
-            time: Date.now() + 1,
-            avatar: BOT_AVATAR,
-            fromBot: true
-          });
-          msgInput.value = '';
-          pruneOldMessages();
-          return;
-        }
-        // Trả lời sai hoặc trễ khi đang tới lượt mình -> không gửi gì lên chat, chỉ xoá ô nhập
-        msgInput.value = '';
-        return;
-      } else {
-        // Không phải lượt của mình -> không cho tin nhắn thường lọt lên chat trong lúc ván đang chạy
-        showSpamWarn('⏳ Chưa đến lượt bạn.');
+      const now = Date.now();
+      if (now - lastSendAt < 600) {
+        showSpamWarn('⏳ Gửi chậm thôi.');
         return;
       }
+      const tresult = await tryClaimTurnAnswer(text);
+      if (tresult && tresult.correct) {
+        markSent(text);
+        // Gộp tên người thắng + từ nối vào 1 tin của bot, không push tin nhắn riêng của người chơi
+        await messagesRef.push({
+          type: 'chat',
+          sender: BOT_NAME,
+          text: `✅ ${myName} nối đúng!\n「${tresult.word}」\n+${tresult.reward} xu.\nAi cũng có thể nối tiếp! (10s)`,
+          time: Date.now() + 1,
+          avatar: BOT_AVATAR,
+          fromBot: true
+        });
+        msgInput.value = '';
+        pruneOldMessages();
+        return;
+      }
+      // Trả lời sai / không hợp lệ trong lúc ván đang chạy -> không gửi gì lên chat, chỉ xoá ô nhập
+      msgInput.value = '';
+      return;
     }
 
     // Thử trả lời challenge đang mở (ai cũng được)
