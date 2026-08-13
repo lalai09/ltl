@@ -446,6 +446,134 @@
   .pollOption .pollPct{ color:var(--muted); font-weight:700; flex-shrink:0; }
   .pollTotal{ font-size:11px; color:var(--muted); margin-top:4px; text-align:right; }
 
+  /* ---------- FRIENDS BUTTON ---------- */
+  .friendsBtnWrap{ position:relative; }
+  #friendsBtn{
+    width:34px; height:34px; border-radius:50%;
+    background:var(--panel2); border:1px solid var(--border);
+    color:var(--text); font-size:16px;
+    display:flex; align-items:center; justify-content:center;
+    transition:0.15s;
+  }
+  #friendsBtn:hover{ border-color:var(--neon2); box-shadow:0 0 0 2px rgba(124,77,255,0.2); }
+  .friendReqBadge{
+    display:none; position:absolute; top:-4px; right:-4px;
+    min-width:16px; height:16px; padding:0 3px; border-radius:8px;
+    background:var(--danger); color:#fff; font-size:10px; font-weight:700;
+    align-items:center; justify-content:center; box-shadow:0 0 6px rgba(255,77,109,0.6);
+  }
+  .friendReqBadge.show{ display:flex; }
+
+  /* ---------- FRIENDS OVERLAY ---------- */
+  #friendsOverlay{
+    display:none; position:fixed; inset:0; z-index:1000;
+    background:rgba(0,0,0,0.65); backdrop-filter:blur(4px);
+    align-items:center; justify-content:center; padding:16px;
+  }
+  #friendsOverlay.open{ display:flex; }
+  .friendsBox{
+    background:linear-gradient(145deg, var(--panel), var(--panel2));
+    border:1px solid var(--border); border-radius:16px;
+    width:100%; max-width:420px; max-height:88vh;
+    display:flex; flex-direction:column;
+    box-shadow:0 0 40px rgba(0,229,255,0.1), 0 12px 40px rgba(0,0,0,0.5);
+    padding:22px;
+  }
+  .friendsBox h2{
+    font-size:20px; margin-bottom:14px;
+    background:linear-gradient(90deg, var(--neon), var(--neon2));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .friendsTabs{ display:flex; gap:6px; margin-bottom:14px; flex-shrink:0; }
+  .friendsTab{
+    flex:1; padding:9px; border-radius:10px; text-align:center;
+    font-size:12.5px; font-weight:700; cursor:pointer; position:relative;
+    background:#0b1220; border:1px solid var(--border); color:var(--muted);
+    transition:0.15s;
+  }
+  .friendsTab.active{ border-color:var(--neon2); color:var(--neon2); background:rgba(124,77,255,0.12); }
+  .friendsTabDot{
+    position:absolute; top:-5px; right:-5px;
+    min-width:15px; height:15px; padding:0 3px; border-radius:8px;
+    background:var(--danger); color:#fff; font-size:9.5px; font-weight:700;
+    align-items:center; justify-content:center; display:none;
+  }
+  .friendsTabDot.show{ display:flex; }
+  #friendSearchInput{
+    width:100%; padding:10px 12px; margin-bottom:12px;
+    background:#0b1220; border:1px solid var(--border); border-radius:10px;
+    color:var(--text); font-size:13.5px; outline:none; flex-shrink:0;
+  }
+  #friendSearchInput:focus{ border-color:var(--neon); }
+  .friendsListWrap{ flex:1; overflow-y:auto; min-height:120px; }
+  .friendRow{
+    display:flex; align-items:center; gap:10px;
+    padding:9px 10px; border:1px solid var(--border); border-radius:12px;
+    margin-bottom:8px; background:#0b1220;
+  }
+  .friendRow img{
+    width:38px; height:38px; border-radius:50%; object-fit:cover;
+    border:1px solid var(--border); background:var(--panel2); flex-shrink:0;
+  }
+  .friendRow .fname{ flex:1; min-width:0; font-size:13.5px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .friendRow .fsub{ font-size:11px; color:var(--muted); font-weight:400; margin-top:2px; }
+  .friendRow .actions{ display:flex; gap:6px; flex-shrink:0; }
+  .friendRow button{
+    padding:7px 10px; border-radius:8px; font-size:11.5px; font-weight:700;
+    background:linear-gradient(90deg, var(--neon), var(--neon2));
+    color:#04101a; border:none; cursor:pointer; white-space:nowrap;
+  }
+  .friendRow button.ghostBtn{
+    background:transparent; border:1px solid var(--border); color:var(--muted);
+  }
+  .friendRow button.declineBtn{
+    background:transparent; border:1px solid var(--danger); color:var(--danger);
+  }
+  .friendRow button:disabled{ opacity:0.45; cursor:not-allowed; }
+  .friendsEmpty{ text-align:center; color:var(--muted); font-size:12.5px; padding:24px 8px; }
+  .friendsClose{
+    margin-top:14px; width:100%; padding:11px; border-radius:10px; flex-shrink:0;
+    background:transparent; border:1px solid var(--border); color:var(--muted);
+    cursor:pointer; font-size:14px;
+  }
+  .friendsClose:hover{ border-color:var(--danger); color:var(--danger); }
+
+  /* ---------- PRIVATE CHAT OVERLAY ---------- */
+  #privateChatOverlay{
+    display:none; position:fixed; inset:0; z-index:1050;
+    background:var(--bg); flex-direction:column;
+  }
+  #privateChatOverlay.open{ display:flex; }
+  #privateChatOverlay header{ flex-shrink:0; }
+  .pcBackBtn{
+    width:32px; height:32px; border-radius:50%; flex-shrink:0;
+    background:var(--panel2); border:1px solid var(--border); color:var(--text);
+    display:flex; align-items:center; justify-content:center; font-size:16px;
+  }
+  .pcBackBtn:hover{ border-color:var(--neon); }
+  #pcMessages{
+    flex:1; overflow-y:auto; padding:16px;
+    display:flex; flex-direction:column; gap:10px;
+  }
+  #pcInputBar{
+    display:flex; gap:10px; padding:14px 16px;
+    background:var(--panel); border-top:1px solid var(--border); flex-shrink:0;
+  }
+  #pcMsgInput{
+    flex:1; padding:13px 16px;
+    background:#0b1220; border:1px solid var(--border);
+    border-radius:24px; color:var(--text); font-size:15px; outline:none;
+  }
+  #pcMsgInput:focus{ border-color:var(--neon); box-shadow:0 0 0 3px rgba(0,229,255,0.12); }
+  #pcSendBtn{
+    width:46px; height:46px; border-radius:50%;
+    background:linear-gradient(135deg, var(--neon), var(--neon2));
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0; transition:0.2s;
+  }
+  #pcSendBtn:hover{ filter:brightness(1.15); transform:scale(1.05); }
+  #pcSendBtn svg{ width:20px; height:20px; fill:#04101a; }
+
 </style>
 </head>
 <body>
@@ -493,6 +621,10 @@
     <div class="userInfo">
       <span class="botBudgeBadge" id="botBudgeDisplay" title="Xu thưởng bot còn lại hôm nay">🤖 100/100</span>
       <span class="xuBadge" id="xuDisplay">💰 0 xu</span>
+      <div class="friendsBtnWrap">
+        <button type="button" id="friendsBtn" title="Bạn bè">👥</button>
+        <span class="friendReqBadge" id="friendReqBadge">0</span>
+      </div>
     </div>
   </header>
 
@@ -614,6 +746,45 @@
   </div>
 </div>
 
+<!-- FRIENDS -->
+<div id="friendsOverlay">
+  <div class="friendsBox">
+    <h2>👥 Bạn bè</h2>
+    <div class="friendsTabs">
+      <div class="friendsTab active" data-tab="friends">Bạn bè
+        <span class="friendsTabDot" id="tabDotFriends"></span>
+      </div>
+      <div class="friendsTab" data-tab="requests">Lời mời
+        <span class="friendsTabDot" id="tabDotRequests"></span>
+      </div>
+      <div class="friendsTab" data-tab="search">Tìm kiếm</div>
+    </div>
+    <input type="text" id="friendSearchInput" placeholder="Tìm theo tên..." style="display:none">
+    <div class="friendsListWrap" id="friendsListWrap">
+      <div class="friendsEmpty">Đang tải...</div>
+    </div>
+    <button type="button" class="friendsClose" id="friendsCloseBtn">Đóng</button>
+  </div>
+</div>
+
+<!-- PRIVATE CHAT -->
+<div id="privateChatOverlay">
+  <header>
+    <div class="title">
+      <button type="button" class="pcBackBtn" id="pcBackBtn">←</button>
+      <img id="pcHeaderAvatar" class="headerAvatar" src="" alt="avatar">
+      <h2 id="pcHeaderName"></h2>
+    </div>
+  </header>
+  <div id="pcMessages"></div>
+  <div id="pcInputBar">
+    <input type="text" id="pcMsgInput" placeholder="Nhắn tin riêng..." maxlength="500" autocomplete="off">
+    <button id="pcSendBtn">
+      <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
+  </div>
+</div>
+
 <input type="file" id="avatarFileInput" accept="image/*" style="display:none">
 <div id="promptOverlay">
   <div class="promptBox">
@@ -661,6 +832,8 @@
 
   const usersRef = db.ref('chat_users');
   const messagesRef = db.ref('chat_messages');
+  const friendRequestsRef = db.ref('friend_requests');
+  const privateMessagesRef = db.ref('private_messages');
 
   const loginScreen = document.getElementById('loginScreen');
   const chatScreen = document.getElementById('chatScreen');
@@ -675,6 +848,15 @@
   const botntQuickBtn = document.getElementById('botntQuickBtn');
   const logoutBtn = document.getElementById('logoutBtn');
   const xuDisplay = document.getElementById('xuDisplay');
+  const friendsBtn = document.getElementById('friendsBtn');
+  const friendReqBadge = document.getElementById('friendReqBadge');
+  const friendsOverlay = document.getElementById('friendsOverlay');
+  const friendsListWrap = document.getElementById('friendsListWrap');
+  const friendSearchInput = document.getElementById('friendSearchInput');
+  const privateChatOverlay = document.getElementById('privateChatOverlay');
+  const pcMessages = document.getElementById('pcMessages');
+  const pcMsgInput = document.getElementById('pcMsgInput');
+  const pcSendBtn = document.getElementById('pcSendBtn');
 
   // Fallback che mật khẩu bằng JS cho trình duyệt không hỗ trợ -webkit-text-security
   (function setupMaskedPasswordInput(){
@@ -1426,6 +1608,7 @@
     listenChallenge(); // shared bot game state
     listenBotBudget(); // ngân sách xu thưởng bot theo ngày
     setupShop();
+    listenFriendsData();
   }
 
   function applyHeaderAvatar(){
@@ -1457,6 +1640,9 @@
     messagesRef.off();
     challengeRef.off();
     db.ref('bot_config').off();
+    stopFriendsData();
+    closePrivateChat();
+    closeFriendsOverlay();
     messagesDiv.innerHTML = '';
     chatScreen.style.display = 'none';
     loginScreen.style.display = 'flex';
@@ -1834,6 +2020,317 @@
     pruneOldMessages();
   }
 
+
+  // ========== BẠN BÈ & CHAT RIÊNG ==========
+  let myKey = '';
+  let myFriends = {};          // { friendKey: displayName }
+  let incomingRequests = {};   // { fromKey: {name, at} }
+  let outgoingKeys = {};       // { toKey: true } -- lời mời mình đã gửi (suy ra từ đọc user khác khi tìm kiếm)
+  let allUsersCache = null;    // { key: {displayName, avatar} }
+  let friendsCurrentTab = 'friends';
+  let currentPCFriendKey = null;
+  let currentPCFriendName = '';
+  let currentPCPairKey = null;
+
+  function pairKeyOf(a, b){
+    return [a, b].sort().join('__');
+  }
+
+  function friendAvatarUrl(key, data){
+    if (data && data.avatar) return data.avatar;
+    return defaultAvatarUrl((data && data.displayName) || key);
+  }
+
+  function updateFriendReqBadge(){
+    const n = Object.keys(incomingRequests).length;
+    friendReqBadge.textContent = n > 99 ? '99+' : String(n);
+    friendReqBadge.classList.toggle('show', n > 0);
+    document.getElementById('tabDotRequests').textContent = n > 99 ? '99+' : String(n);
+    document.getElementById('tabDotRequests').classList.toggle('show', n > 0);
+  }
+
+  function listenFriendsData(){
+    if (!myName) return;
+    myKey = toKey(myName);
+    usersRef.child(myKey).child('friends').on('value', (snap) => {
+      myFriends = snap.val() || {};
+      if (friendsOverlay.classList.contains('open') && friendsCurrentTab === 'friends') {
+        renderFriendsTabList();
+      }
+    });
+    friendRequestsRef.child(myKey).on('value', (snap) => {
+      incomingRequests = snap.val() || {};
+      updateFriendReqBadge();
+      if (friendsOverlay.classList.contains('open') && friendsCurrentTab === 'requests') {
+        renderRequestsTabList();
+      }
+    });
+  }
+
+  function stopFriendsData(){
+    if (myKey) {
+      usersRef.child(myKey).child('friends').off();
+      friendRequestsRef.child(myKey).off();
+    }
+    myFriends = {};
+    incomingRequests = {};
+    myKey = '';
+    updateFriendReqBadge();
+  }
+
+  async function loadAllUsersCache(force){
+    if (allUsersCache && !force) return allUsersCache;
+    const snap = await usersRef.get();
+    const val = snap.val() || {};
+    allUsersCache = val;
+    return allUsersCache;
+  }
+
+  function openFriendsOverlay(){
+    friendsOverlay.classList.add('open');
+    switchFriendsTab('friends');
+  }
+  function closeFriendsOverlay(){
+    friendsOverlay.classList.remove('open');
+  }
+
+  function switchFriendsTab(tab){
+    friendsCurrentTab = tab;
+    document.querySelectorAll('.friendsTab').forEach(t => {
+      t.classList.toggle('active', t.dataset.tab === tab);
+    });
+    friendSearchInput.style.display = (tab === 'search') ? 'block' : 'none';
+    if (tab === 'friends') renderFriendsTabList();
+    else if (tab === 'requests') renderRequestsTabList();
+    else renderSearchTabList('');
+  }
+
+  function friendsEmptyState(text){
+    friendsListWrap.innerHTML = '<div class="friendsEmpty">' + escapeHtml(text) + '</div>';
+  }
+
+  async function renderFriendsTabList(){
+    const keys = Object.keys(myFriends);
+    if (!keys.length) { friendsEmptyState('Bạn chưa có bạn bè nào. Hãy tìm kiếm và kết bạn!'); return; }
+    friendsListWrap.innerHTML = '';
+    const users = await loadAllUsersCache();
+    keys.forEach(fk => {
+      const udata = users[fk] || { displayName: myFriends[fk] };
+      const name = udata.displayName || myFriends[fk] || fk;
+      const row = document.createElement('div');
+      row.className = 'friendRow';
+      row.innerHTML =
+        '<img src="' + friendAvatarUrl(fk, udata) + '" alt="avt">' +
+        '<div class="fname">' + escapeHtml(name) + '</div>' +
+        '<div class="actions">' +
+          '<button type="button" class="chatBtn">💬 Nhắn tin</button>' +
+          '<button type="button" class="ghostBtn unfriendBtn">Huỷ kết bạn</button>' +
+        '</div>';
+      row.querySelector('.chatBtn').addEventListener('click', () => {
+        closeFriendsOverlay();
+        openPrivateChat(fk, name, friendAvatarUrl(fk, udata));
+      });
+      row.querySelector('.unfriendBtn').addEventListener('click', () => unfriend(fk, name));
+      friendsListWrap.appendChild(row);
+    });
+  }
+
+  function renderRequestsTabList(){
+    const keys = Object.keys(incomingRequests);
+    if (!keys.length) { friendsEmptyState('Không có lời mời kết bạn nào.'); return; }
+    friendsListWrap.innerHTML = '';
+    keys.forEach(fk => {
+      const req = incomingRequests[fk] || {};
+      const name = req.name || fk;
+      const row = document.createElement('div');
+      row.className = 'friendRow';
+      row.innerHTML =
+        '<img src="' + defaultAvatarUrl(name) + '" alt="avt">' +
+        '<div class="fname">' + escapeHtml(name) + '<div class="fsub">Muốn kết bạn với bạn</div></div>' +
+        '<div class="actions">' +
+          '<button type="button" class="acceptBtn">Chấp nhận</button>' +
+          '<button type="button" class="declineBtn">Từ chối</button>' +
+        '</div>';
+      row.querySelector('.acceptBtn').addEventListener('click', () => acceptFriendRequest(fk, name));
+      row.querySelector('.declineBtn').addEventListener('click', () => declineFriendRequest(fk));
+      friendsListWrap.appendChild(row);
+    });
+  }
+
+  async function renderSearchTabList(query){
+    const users = await loadAllUsersCache();
+    const q = (query || '').trim().toLowerCase();
+    const keys = Object.keys(users).filter(k => k !== myKey);
+    const filtered = q
+      ? keys.filter(k => (users[k].displayName || k).toLowerCase().indexOf(q) !== -1)
+      : keys;
+    if (!filtered.length) { friendsEmptyState(q ? 'Không tìm thấy người dùng nào.' : 'Nhập tên để tìm kiếm người dùng.'); return; }
+    friendsListWrap.innerHTML = '';
+    filtered.slice(0, 50).forEach(fk => {
+      const udata = users[fk] || {};
+      const name = udata.displayName || fk;
+      const row = document.createElement('div');
+      row.className = 'friendRow';
+      const isFriend = !!myFriends[fk];
+      let actionsHtml;
+      if (isFriend) {
+        actionsHtml = '<button type="button" class="chatBtn">💬 Nhắn tin</button>';
+      } else {
+        actionsHtml = '<button type="button" class="addBtn">➕ Kết bạn</button>';
+      }
+      row.innerHTML =
+        '<img src="' + friendAvatarUrl(fk, udata) + '" alt="avt">' +
+        '<div class="fname">' + escapeHtml(name) + '</div>' +
+        '<div class="actions">' + actionsHtml + '</div>';
+      const chatBtn = row.querySelector('.chatBtn');
+      if (chatBtn) chatBtn.addEventListener('click', () => {
+        closeFriendsOverlay();
+        openPrivateChat(fk, name, friendAvatarUrl(fk, udata));
+      });
+      const addBtn = row.querySelector('.addBtn');
+      if (addBtn) addBtn.addEventListener('click', () => sendFriendRequest(fk, name, addBtn));
+      friendsListWrap.appendChild(row);
+    });
+  }
+
+  async function sendFriendRequest(targetKey, targetName, btnEl){
+    if (!myName || targetKey === myKey) return;
+    if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Đang gửi...'; }
+    try {
+      const exists = await usersRef.child(targetKey).get();
+      if (!exists.exists()) {
+        if (btnEl) { btnEl.disabled = false; btnEl.textContent = '➕ Kết bạn'; }
+        return;
+      }
+      await friendRequestsRef.child(targetKey).child(myKey).set({
+        name: myName, at: Date.now()
+      });
+      if (btnEl) { btnEl.textContent = '✓ Đã gửi lời mời'; }
+    } catch (e) {
+      if (btnEl) { btnEl.disabled = false; btnEl.textContent = '➕ Kết bạn'; }
+      alert('Lỗi gửi lời mời: ' + e.message);
+    }
+  }
+
+  async function acceptFriendRequest(fromKey, fromName){
+    try {
+      await usersRef.child(myKey).child('friends').child(fromKey).set(fromName);
+      await usersRef.child(fromKey).child('friends').child(myKey).set(myName);
+      await friendRequestsRef.child(myKey).child(fromKey).remove();
+    } catch (e) {
+      alert('Lỗi: ' + e.message);
+    }
+  }
+
+  async function declineFriendRequest(fromKey){
+    try {
+      await friendRequestsRef.child(myKey).child(fromKey).remove();
+    } catch (e) {
+      alert('Lỗi: ' + e.message);
+    }
+  }
+
+  async function unfriend(friendKey, friendName){
+    if (!confirm('Huỷ kết bạn với 「' + friendName + '」?')) return;
+    try {
+      await usersRef.child(myKey).child('friends').child(friendKey).remove();
+      await usersRef.child(friendKey).child('friends').child(myKey).remove();
+    } catch (e) {
+      alert('Lỗi: ' + e.message);
+    }
+  }
+
+  // ---- Chat riêng (private chat) ----
+  function openPrivateChat(friendKey, friendName, friendAvatar){
+    currentPCFriendKey = friendKey;
+    currentPCFriendName = friendName;
+    currentPCPairKey = pairKeyOf(myKey, friendKey);
+    document.getElementById('pcHeaderName').textContent = friendName;
+    document.getElementById('pcHeaderAvatar').src = friendAvatar || defaultAvatarUrl(friendName);
+    pcMessages.innerHTML = '';
+    privateChatOverlay.classList.add('open');
+    listenPrivateMessages();
+    setTimeout(() => pcMsgInput.focus(), 100);
+  }
+
+  function closePrivateChat(){
+    privateChatOverlay.classList.remove('open');
+    if (currentPCPairKey) privateMessagesRef.child(currentPCPairKey).off();
+    currentPCFriendKey = null;
+    currentPCPairKey = null;
+  }
+
+  function listenPrivateMessages(){
+    if (!currentPCPairKey) return;
+    privateMessagesRef.child(currentPCPairKey).off();
+    privateMessagesRef.child(currentPCPairKey).limitToLast(150).on('child_added', (snap) => {
+      renderPrivateMessage(snap.val());
+      pcMessages.scrollTop = pcMessages.scrollHeight;
+    });
+  }
+
+  function renderPrivateMessage(m){
+    if (!m) return;
+    const isMine = m.from === myKey;
+    const row = document.createElement('div');
+    row.className = 'msgRow ' + (isMine ? 'mine' : 'theirs');
+    const av = document.createElement('img');
+    av.className = 'msgAvatar';
+    av.alt = 'avt';
+    av.src = isMine ? (myAvatar || defaultAvatarUrl(myName)) : (document.getElementById('pcHeaderAvatar').src);
+    const div = document.createElement('div');
+    div.className = 'msg ' + (isMine ? 'mine' : 'theirs');
+    div.innerHTML =
+      '<div class="name">' + escapeHtml(m.fromName || '') + '</div>' +
+      '<div class="text">' + escapeHtml(m.text || '').replace(/\n/g, '<br>') + '</div>' +
+      '<div class="time">' + formatTime(m.time) + '</div>';
+    row.appendChild(av);
+    row.appendChild(div);
+    pcMessages.appendChild(row);
+  }
+
+  let pcLastSendAt = 0;
+  async function sendPrivateMessage(){
+    const text = pcMsgInput.value.trim();
+    if (!text || !currentPCPairKey) return;
+    const now = Date.now();
+    if (now - pcLastSendAt < 700) return;
+    pcLastSendAt = now;
+    pcMsgInput.value = '';
+    try {
+      await privateMessagesRef.child(currentPCPairKey).push({
+        from: myKey,
+        fromName: myName,
+        to: currentPCFriendKey,
+        text: text,
+        time: now
+      });
+    } catch (e) {
+      alert('Lỗi gửi tin nhắn: ' + e.message);
+    }
+  }
+
+  // Events cho bạn bè / chat riêng
+  friendsBtn.addEventListener('click', () => {
+    if (!myName) return;
+    loadAllUsersCache(true);
+    openFriendsOverlay();
+  });
+  document.getElementById('friendsCloseBtn').addEventListener('click', closeFriendsOverlay);
+  document.querySelectorAll('.friendsTab').forEach(t => {
+    t.addEventListener('click', () => switchFriendsTab(t.dataset.tab));
+  });
+  let friendSearchTimer = null;
+  friendSearchInput.addEventListener('input', () => {
+    clearTimeout(friendSearchTimer);
+    const val = friendSearchInput.value;
+    friendSearchTimer = setTimeout(() => renderSearchTabList(val), 200);
+  });
+  document.getElementById('pcBackBtn').addEventListener('click', closePrivateChat);
+  pcSendBtn.addEventListener('click', sendPrivateMessage);
+  pcMsgInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendPrivateMessage();
+  });
 
   // ========== SHOP ==========
   let promptResolver = null;
