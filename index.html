@@ -2165,9 +2165,9 @@
     }
   }
 
-  document.getElementById('tienLen').addEventListener('click', () => {
+  document.getElementById('tienLenBtn').addEventListener('click', () => {
     if (!myName) return;
-    const url = 'tienlen' + encodeURIComponent(myName) +
+    const url = 'tienlen/index.html?name=' + encodeURIComponent(myName) +
                 '&uid=' + encodeURIComponent(toKey(myName));
     window.open(url, '_blank');
   });
