@@ -606,7 +606,7 @@ function exitToChat(){
     roomRef.child('players/' + myId).remove();
     if (unsubscribeFn) roomRef.off('value', unsubscribeFn);
   }
-  window.location.href = '../index.html';
+  window.location.href = '/';
 }
 
 async function createRoom(){
