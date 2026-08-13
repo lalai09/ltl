@@ -290,21 +290,25 @@
   }
   .shopSub{ color:var(--muted); font-size:12px; margin-bottom:16px; }
   .shopItem{
-    display:flex; align-items:center; gap:12px;
-    padding:12px; border:1px solid var(--border); border-radius:12px;
-    margin-bottom:10px; background:#0b1220;
+    display:flex; align-items:center; gap:10px;
+    padding:10px 12px; border:1px solid var(--border); border-radius:12px;
+    margin-bottom:8px; background:#0b1220;
   }
-  .shopItem .icon{ font-size:28px; width:40px; text-align:center; flex-shrink:0; }
+  .shopItem .icon{ font-size:24px; width:32px; text-align:center; flex-shrink:0; }
   .shopItem .info{ flex:1; min-width:0; }
-  .shopItem .info .name{ font-weight:700; font-size:14px; }
-  .shopItem .info .desc{ font-size:11.5px; color:var(--muted); margin-top:2px; }
+  .shopItem .info .name{ font-weight:700; font-size:13.5px; }
+  .shopItem .info .desc{ font-size:11px; color:var(--muted); margin-top:2px; }
+  .shopItem .owned{
+    font-size:11px; color:var(--neon2); font-weight:700; white-space:nowrap;
+  }
   .shopItem .price{
     background:rgba(0,230,118,0.12); border:1px solid var(--success);
-    color:var(--success); padding:4px 10px; border-radius:16px;
-    font-size:12px; font-weight:700; white-space:nowrap;
+    color:var(--success); padding:3px 9px; border-radius:16px;
+    font-size:11.5px; font-weight:700; white-space:nowrap;
   }
+  .shopItem .actions{ display:flex; gap:6px; flex-shrink:0; }
   .shopItem button{
-    padding:8px 12px; border-radius:8px; font-size:12px; font-weight:700;
+    padding:7px 11px; border-radius:8px; font-size:11.5px; font-weight:700;
     background:linear-gradient(90deg, var(--neon), var(--neon2));
     color:#04101a; border:none; cursor:pointer; white-space:nowrap;
   }
@@ -312,8 +316,58 @@
   .shopItem button.useBtn{
     background:transparent; border:1px solid var(--neon2); color:var(--neon2);
   }
-  .invSection{ margin-top:18px; }
-  .invSection h3{ font-size:14px; margin-bottom:10px; color:var(--neon); }
+  .invSection{ margin-top:14px; }
+  .invSection h3{ font-size:13px; margin-bottom:8px; color:var(--neon); }
+
+  /* Hiệu ứng tin nhắn */
+  .effectSelectRow{
+    display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;
+  }
+  .effectChip{
+    padding:5px 10px; border-radius:14px; font-size:11px; cursor:pointer;
+    background:#0b1220; border:1px solid var(--border); color:var(--muted);
+  }
+  .effectChip.active{
+    border-color:var(--neon2); color:var(--neon2); background:rgba(124,77,255,0.12);
+  }
+
+  @keyframes msgGlow{
+    0%,100%{ box-shadow:0 0 8px rgba(0,229,255,0.35), 0 0 18px rgba(124,77,255,0.15); }
+    50%{ box-shadow:0 0 18px rgba(0,229,255,0.75), 0 0 34px rgba(124,77,255,0.45); }
+  }
+  .msg.fx-glow{ animation:msgGlow 1.6s ease-in-out infinite; }
+
+  @keyframes msgRainbow{
+    0%{ border-color:#ff4d6d; }
+    20%{ border-color:#ffb300; }
+    40%{ border-color:#00e676; }
+    60%{ border-color:#00e5ff; }
+    80%{ border-color:#7c4dff; }
+    100%{ border-color:#ff4d6d; }
+  }
+  .msg.fx-rainbow{ animation:msgRainbow 3s linear infinite; }
+
+  @keyframes msgShake{
+    0%,100%{ transform:translateX(0); }
+    20%{ transform:translateX(-3px); }
+    40%{ transform:translateX(3px); }
+    60%{ transform:translateX(-2px); }
+    80%{ transform:translateX(2px); }
+  }
+  .msg.fx-shake{ animation:msgShake 0.4s ease-in-out 1; }
+
+  .msg.fx-sparkle{ position:relative; overflow:visible; }
+  .msg.fx-sparkle::before, .msg.fx-sparkle::after{
+    content:'✨'; position:absolute; font-size:13px; opacity:0;
+    animation:sparklePop 1.4s ease-in-out 1;
+  }
+  .msg.fx-sparkle::before{ top:-8px; left:10px; animation-delay:0.1s; }
+  .msg.fx-sparkle::after{ bottom:-8px; right:14px; animation-delay:0.4s; }
+  @keyframes sparklePop{
+    0%{ opacity:0; transform:scale(0.4) translateY(4px); }
+    40%{ opacity:1; transform:scale(1.1) translateY(0); }
+    100%{ opacity:0; transform:scale(0.6) translateY(-4px); }
+  }
   .shopClose{
     margin-top:14px; width:100%; padding:11px; border-radius:10px;
     background:transparent; border:1px solid var(--border); color:var(--muted);
@@ -409,52 +463,60 @@
 <div id="shopOverlay">
   <div class="shopBox">
     <h2>🛒 Cửa hàng</h2>
-    <p class="shopSub">Xu hiện có: <b id="shopXu" style="color:var(--success)">0</b> — Bấm vào xu để mở lại</p>
+    <p class="shopSub">Xu hiện có: <b id="shopXu" style="color:var(--success)">0</b></p>
 
     <div class="shopItem" data-item="rename">
       <div class="icon">🏷️</div>
       <div class="info">
         <div class="name">Thẻ đổi tên</div>
-        <div class="desc">Đổi tên hiển thị trong chat</div>
+        <div class="desc">Sở hữu: <b id="invRename">0</b></div>
       </div>
       <div class="price">50 xu</div>
-      <button type="button" class="buyBtn" data-item="rename" data-price="50">Mua</button>
+      <div class="actions">
+        <button type="button" class="buyBtn" data-item="rename" data-price="50">Mua</button>
+        <button type="button" class="useBtn" data-use="rename">Dùng</button>
+      </div>
     </div>
     <div class="shopItem" data-item="avatar">
       <div class="icon">🖼️</div>
       <div class="info">
         <div class="name">Thẻ đổi avatar</div>
-        <div class="desc">Chọn ảnh từ thư viện trên máy của bạn</div>
+        <div class="desc">Sở hữu: <b id="invAvatar">0</b></div>
       </div>
       <div class="price">75 xu</div>
-      <button type="button" class="buyBtn" data-item="avatar" data-price="75">Mua</button>
+      <div class="actions">
+        <button type="button" class="buyBtn" data-item="avatar" data-price="75">Mua</button>
+        <button type="button" class="useBtn" data-use="avatar">Dùng</button>
+      </div>
     </div>
     <div class="shopItem" data-item="color">
       <div class="icon">🎨</div>
       <div class="info">
         <div class="name">Thẻ đổi màu chat</div>
-        <div class="desc">Đổi màu khung tin nhắn của bạn</div>
+        <div class="desc">Sở hữu: <b id="invColor">0</b></div>
       </div>
       <div class="price">60 xu</div>
-      <button type="button" class="buyBtn" data-item="color" data-price="60">Mua</button>
-    </div>
-
-    <div class="invSection">
-      <h3>🎒 Túi đồ</h3>
-      <div class="shopItem">
-        <div class="icon">🏷️</div>
-        <div class="info"><div class="name">Thẻ đổi tên</div><div class="desc">Sở hữu: <b id="invRename">0</b></div></div>
-        <button type="button" class="useBtn" data-use="rename">Dùng</button>
-      </div>
-      <div class="shopItem">
-        <div class="icon">🖼️</div>
-        <div class="info"><div class="name">Thẻ đổi avatar</div><div class="desc">Sở hữu: <b id="invAvatar">0</b></div></div>
-        <button type="button" class="useBtn" data-use="avatar">Dùng</button>
-      </div>
-      <div class="shopItem">
-        <div class="icon">🎨</div>
-        <div class="info"><div class="name">Thẻ đổi màu chat</div><div class="desc">Sở hữu: <b id="invColor">0</b></div></div>
+      <div class="actions">
+        <button type="button" class="buyBtn" data-item="color" data-price="60">Mua</button>
         <button type="button" class="useBtn" data-use="color">Dùng</button>
+      </div>
+    </div>
+    <div class="shopItem" data-item="effect" style="flex-wrap:wrap;">
+      <div class="icon">✨</div>
+      <div class="info">
+        <div class="name">Thẻ hiệu ứng tin nhắn</div>
+        <div class="desc">Sở hữu: <b id="invEffect">0</b> — Tin nhắn của bạn sẽ có hiệu ứng động</div>
+        <div class="effectSelectRow" id="effectSelectRow">
+          <span class="effectChip" data-fx="">Tắt</span>
+          <span class="effectChip" data-fx="glow">💠 Phát sáng</span>
+          <span class="effectChip" data-fx="rainbow">🌈 Cầu vồng</span>
+          <span class="effectChip" data-fx="shake">📳 Rung</span>
+          <span class="effectChip" data-fx="sparkle">✨ Lấp lánh</span>
+        </div>
+      </div>
+      <div class="price">80 xu</div>
+      <div class="actions">
+        <button type="button" class="buyBtn" data-item="effect" data-price="80">Mua</button>
       </div>
     </div>
 
@@ -539,10 +601,11 @@
   let myXu = 0;
   let myAvatar = '';
   let myChatColor = '';
-  let myInv = { rename: 0, avatar: 0, color: 0 };
+  let myInv = { rename: 0, avatar: 0, color: 0, effect: 0 };
+  let myMsgEffect = '';
   const LS_KEY = 'chatchung_login';
 
-  const SHOP_PRICES = { rename: 50, avatar: 30, color: 40 };
+  const SHOP_PRICES = { rename: 50, avatar: 30, color: 40, effect: 80 };
 
   // ========== BOT NỐI TỪ ==========
   // Word list loaded from Firebase path: bot_words
@@ -1232,8 +1295,10 @@
     myInv = {
       rename: (extra.inv && extra.inv.rename) || 0,
       avatar: (extra.inv && extra.inv.avatar) || 0,
-      color: (extra.inv && extra.inv.color) || 0
+      color: (extra.inv && extra.inv.color) || 0,
+      effect: (extra.inv && extra.inv.effect) || 0
     };
+    myMsgEffect = extra.msgEffect || '';
     localStorage.setItem(LS_KEY, name);
     enterChat();
   }
@@ -1277,7 +1342,8 @@
     myXu = 0;
     myAvatar = '';
     myChatColor = '';
-    myInv = { rename: 0, avatar: 0, color: 0 };
+    myInv = { rename: 0, avatar: 0, color: 0, effect: 0 };
+    myMsgEffect = '';
     messagesRef.off();
     challengeRef.off();
     db.ref('bot_config').off();
@@ -1387,6 +1453,11 @@
         : `linear-gradient(135deg, ${hexToRgba(col,0.18)}, var(--panel2))`;
       const nameEl = div.querySelector('.name');
       if (nameEl) nameEl.style.color = col;
+    }
+
+    // Hiệu ứng tin nhắn (mua từ cửa hàng)
+    if (m.fx && !isBot) {
+      div.classList.add('fx-' + m.fx);
     }
 
     row.appendChild(av);
@@ -1530,6 +1601,7 @@
     };
     if (myChatColor) payload.chatColor = myChatColor;
     if (myAvatar) payload.avatar = myAvatar;
+    if (myMsgEffect) payload.fx = myMsgEffect;
     messagesRef.push(payload);
     markSent(text);
     msgInput.value = '';
@@ -1588,6 +1660,9 @@
     document.querySelectorAll('.useBtn').forEach(btn => {
       btn.onclick = () => useItem(btn.dataset.use);
     });
+    document.querySelectorAll('.effectChip').forEach(chip => {
+      chip.onclick = () => selectMsgEffect(chip.dataset.fx);
+    });
     document.getElementById('promptCancelBtn').onclick = () => finishPrompt(null);
     document.getElementById('promptOkBtn').onclick = () => {
       const textEl = document.getElementById('promptText');
@@ -1610,7 +1685,26 @@
     document.getElementById('invRename').textContent = myInv.rename || 0;
     document.getElementById('invAvatar').textContent = myInv.avatar || 0;
     document.getElementById('invColor').textContent = myInv.color || 0;
+    document.getElementById('invEffect').textContent = myInv.effect || 0;
+    document.querySelectorAll('.effectChip').forEach(chip => {
+      chip.classList.toggle('active', chip.dataset.fx === myMsgEffect);
+    });
     updateXuDisplay();
+  }
+  async function selectMsgEffect(fx){
+    if (!myName) return;
+    if (fx && (myInv.effect || 0) < 1) {
+      shopMsg('Bạn chưa có thẻ hiệu ứng. Hãy mua trước!', false);
+      return;
+    }
+    myMsgEffect = fx || '';
+    try {
+      await saveUserProfile({ msgEffect: myMsgEffect });
+      refreshShopUI();
+      shopMsg(fx ? 'Đã bật hiệu ứng tin nhắn!' : 'Đã tắt hiệu ứng tin nhắn.', true);
+    } catch (e) {
+      shopMsg('Lỗi: ' + e.message, false);
+    }
   }
   function shopMsg(text, ok){
     const el = document.getElementById('shopMsg');
@@ -1625,7 +1719,8 @@
       xu: myXu,
       inv: myInv,
       avatar: myAvatar || null,
-      chatColor: myChatColor || null
+      chatColor: myChatColor || null,
+      msgEffect: myMsgEffect || null
     }, extra || {});
     // if renaming, handled separately
     await usersRef.child(key).update(data);
@@ -1642,7 +1737,7 @@
     try {
       await saveUserProfile();
       refreshShopUI();
-      shopMsg('Đã mua thành công! Kiểm tra Túi đồ.', true);
+      shopMsg(item === 'effect' ? 'Đã mua! Chọn hiệu ứng bên dưới để dùng.' : 'Đã mua thành công! Kiểm tra Túi đồ.', true);
     } catch (e) {
       myXu += price;
       myInv[item] -= 1;
@@ -1836,8 +1931,10 @@
           myInv = {
             rename: (data.inv && data.inv.rename) || 0,
             avatar: (data.inv && data.inv.avatar) || 0,
-            color: (data.inv && data.inv.color) || 0
+            color: (data.inv && data.inv.color) || 0,
+            effect: (data.inv && data.inv.effect) || 0
           };
+          myMsgEffect = data.msgEffect || '';
           enterChat();
         } else {
           localStorage.removeItem(LS_KEY);
