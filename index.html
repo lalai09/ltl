@@ -715,9 +715,13 @@
   // Ủng hộ xu cho bot (bấm vào avatar bot trong chat)
   async function donateToBot() {
     if (!myName) return;
+    if (currentBotBudget >= BOT_DAILY_BUDGET) {
+      showSpamWarn('🤖 Bot vẫn còn đủ xu thưởng hôm nay, chưa cần ủng hộ đâu!');
+      return;
+    }
     const raw = await askPrompt('Nhập số xu muốn ủng hộ cho bot', 'text');
     if (!raw) return;
-    const amount = parseInt(String(raw).trim(), 10);
+    let amount = parseInt(String(raw).trim(), 10);
     if (!Number.isFinite(amount) || amount <= 0) {
       showSpamWarn('⚠️ Số xu không hợp lệ.');
       return;
@@ -726,6 +730,14 @@
       showSpamWarn('⚠️ Bạn không đủ xu để ủng hộ.');
       return;
     }
+    // Chỉ lấy đúng phần bot còn thiếu, tránh mất xu thừa không cần thiết
+    const needed = BOT_DAILY_BUDGET - currentBotBudget;
+    if (needed <= 0) {
+      showSpamWarn('🤖 Bot vừa được ủng hộ đủ rồi, chưa cần thêm đâu!');
+      return;
+    }
+    if (amount > needed) amount = needed;
+
     myXu -= amount;
     updateXuDisplay();
     try {
