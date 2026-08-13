@@ -502,22 +502,62 @@
         <button type="button" class="useBtn" data-use="color">Dùng</button>
       </div>
     </div>
-    <div class="shopItem" data-item="effect" style="flex-wrap:wrap;">
-      <div class="icon">✨</div>
+    <div class="shopItem" data-item="fx_glow">
+      <div class="icon">💠</div>
       <div class="info">
-        <div class="name">Thẻ hiệu ứng tin nhắn</div>
-        <div class="desc">Sở hữu: <b id="invEffect">0</b> — Tin nhắn của bạn sẽ có hiệu ứng động</div>
-        <div class="effectSelectRow" id="effectSelectRow">
-          <span class="effectChip" data-fx="">Tắt</span>
-          <span class="effectChip" data-fx="glow">💠 Phát sáng</span>
-          <span class="effectChip" data-fx="rainbow">🌈 Cầu vồng</span>
-          <span class="effectChip" data-fx="shake">📳 Rung</span>
-          <span class="effectChip" data-fx="sparkle">✨ Lấp lánh</span>
-        </div>
+        <div class="name">Hiệu ứng Phát sáng</div>
+        <div class="desc">Sở hữu: <b id="invFxGlow">0</b></div>
       </div>
       <div class="price">80 xu</div>
       <div class="actions">
-        <button type="button" class="buyBtn" data-item="effect" data-price="80">Mua</button>
+        <button type="button" class="buyBtn" data-item="fx_glow" data-price="80">Mua</button>
+        <button type="button" class="useBtn effectChip" data-fx="glow">Dùng</button>
+      </div>
+    </div>
+    <div class="shopItem" data-item="fx_rainbow">
+      <div class="icon">🌈</div>
+      <div class="info">
+        <div class="name">Hiệu ứng Cầu vồng</div>
+        <div class="desc">Sở hữu: <b id="invFxRainbow">0</b></div>
+      </div>
+      <div class="price">80 xu</div>
+      <div class="actions">
+        <button type="button" class="buyBtn" data-item="fx_rainbow" data-price="80">Mua</button>
+        <button type="button" class="useBtn effectChip" data-fx="rainbow">Dùng</button>
+      </div>
+    </div>
+    <div class="shopItem" data-item="fx_shake">
+      <div class="icon">📳</div>
+      <div class="info">
+        <div class="name">Hiệu ứng Rung</div>
+        <div class="desc">Sở hữu: <b id="invFxShake">0</b></div>
+      </div>
+      <div class="price">80 xu</div>
+      <div class="actions">
+        <button type="button" class="buyBtn" data-item="fx_shake" data-price="80">Mua</button>
+        <button type="button" class="useBtn effectChip" data-fx="shake">Dùng</button>
+      </div>
+    </div>
+    <div class="shopItem" data-item="fx_sparkle">
+      <div class="icon">✨</div>
+      <div class="info">
+        <div class="name">Hiệu ứng Lấp lánh</div>
+        <div class="desc">Sở hữu: <b id="invFxSparkle">0</b></div>
+      </div>
+      <div class="price">80 xu</div>
+      <div class="actions">
+        <button type="button" class="buyBtn" data-item="fx_sparkle" data-price="80">Mua</button>
+        <button type="button" class="useBtn effectChip" data-fx="sparkle">Dùng</button>
+      </div>
+    </div>
+    <div class="shopItem">
+      <div class="icon">🚫</div>
+      <div class="info">
+        <div class="name">Tắt hiệu ứng</div>
+        <div class="desc">Hiệu ứng đang dùng: <b id="curFxLabel">Không có</b></div>
+      </div>
+      <div class="actions">
+        <button type="button" class="useBtn effectChip" data-fx="">Tắt</button>
       </div>
     </div>
 
@@ -602,11 +642,12 @@
   let myXu = 0;
   let myAvatar = '';
   let myChatColor = '';
-  let myInv = { rename: 0, avatar: 0, color: 0, effect: 0 };
+  let myInv = { rename: 0, avatar: 0, color: 0, fx_glow: 0, fx_rainbow: 0, fx_shake: 0, fx_sparkle: 0 };
   let myMsgEffect = '';
   const LS_KEY = 'chatchung_login';
 
-  const SHOP_PRICES = { rename: 50, avatar: 30, color: 40, effect: 80 };
+  const SHOP_PRICES = { rename: 50, avatar: 30, color: 40, fx_glow: 80, fx_rainbow: 80, fx_shake: 80, fx_sparkle: 80 };
+  const FX_LABELS = { glow: '💠 Phát sáng', rainbow: '🌈 Cầu vồng', shake: '📳 Rung', sparkle: '✨ Lấp lánh' };
 
   // ========== BOT NỐI TỪ ==========
   // Word list loaded from Firebase path: bot_words
@@ -1297,7 +1338,10 @@
       rename: (extra.inv && extra.inv.rename) || 0,
       avatar: (extra.inv && extra.inv.avatar) || 0,
       color: (extra.inv && extra.inv.color) || 0,
-      effect: (extra.inv && extra.inv.effect) || 0
+      fx_glow: (extra.inv && extra.inv.fx_glow) || 0,
+      fx_rainbow: (extra.inv && extra.inv.fx_rainbow) || 0,
+      fx_shake: (extra.inv && extra.inv.fx_shake) || 0,
+      fx_sparkle: (extra.inv && extra.inv.fx_sparkle) || 0
     };
     myMsgEffect = extra.msgEffect || '';
     localStorage.setItem(LS_KEY, name);
@@ -1343,7 +1387,7 @@
     myXu = 0;
     myAvatar = '';
     myChatColor = '';
-    myInv = { rename: 0, avatar: 0, color: 0, effect: 0 };
+    myInv = { rename: 0, avatar: 0, color: 0, fx_glow: 0, fx_rainbow: 0, fx_shake: 0, fx_sparkle: 0 };
     myMsgEffect = '';
     messagesRef.off();
     challengeRef.off();
@@ -1686,23 +1730,28 @@
     document.getElementById('invRename').textContent = myInv.rename || 0;
     document.getElementById('invAvatar').textContent = myInv.avatar || 0;
     document.getElementById('invColor').textContent = myInv.color || 0;
-    document.getElementById('invEffect').textContent = myInv.effect || 0;
+    document.getElementById('invFxGlow').textContent = myInv.fx_glow || 0;
+    document.getElementById('invFxRainbow').textContent = myInv.fx_rainbow || 0;
+    document.getElementById('invFxShake').textContent = myInv.fx_shake || 0;
+    document.getElementById('invFxSparkle').textContent = myInv.fx_sparkle || 0;
+    document.getElementById('curFxLabel').textContent = myMsgEffect ? (FX_LABELS[myMsgEffect] || myMsgEffect) : 'Không có';
     document.querySelectorAll('.effectChip').forEach(chip => {
       chip.classList.toggle('active', chip.dataset.fx === myMsgEffect);
     });
     updateXuDisplay();
   }
+  const FX_ITEM_KEY = { glow: 'fx_glow', rainbow: 'fx_rainbow', shake: 'fx_shake', sparkle: 'fx_sparkle' };
   async function selectMsgEffect(fx){
     if (!myName) return;
-    if (fx && (myInv.effect || 0) < 1) {
-      shopMsg('Bạn chưa có thẻ hiệu ứng. Hãy mua trước!', false);
+    if (fx && (myInv[FX_ITEM_KEY[fx]] || 0) < 1) {
+      shopMsg('Bạn chưa mua hiệu ứng này. Hãy mua trước!', false);
       return;
     }
     myMsgEffect = fx || '';
     try {
       await saveUserProfile({ msgEffect: myMsgEffect });
       refreshShopUI();
-      shopMsg(fx ? 'Đã bật hiệu ứng tin nhắn!' : 'Đã tắt hiệu ứng tin nhắn.', true);
+      shopMsg(fx ? 'Đã bật hiệu ứng: ' + (FX_LABELS[fx] || fx) : 'Đã tắt hiệu ứng tin nhắn.', true);
     } catch (e) {
       shopMsg('Lỗi: ' + e.message, false);
     }
@@ -1966,7 +2015,10 @@
             rename: (data.inv && data.inv.rename) || 0,
             avatar: (data.inv && data.inv.avatar) || 0,
             color: (data.inv && data.inv.color) || 0,
-            effect: (data.inv && data.inv.effect) || 0
+            fx_glow: (data.inv && data.inv.fx_glow) || 0,
+            fx_rainbow: (data.inv && data.inv.fx_rainbow) || 0,
+            fx_shake: (data.inv && data.inv.fx_shake) || 0,
+            fx_sparkle: (data.inv && data.inv.fx_sparkle) || 0
           };
           myMsgEffect = data.msgEffect || '';
           enterChat();
