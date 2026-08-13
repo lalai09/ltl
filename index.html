@@ -495,7 +495,17 @@
   const BOT_NAME = '🤖 Bot lor ';
   const DEFAULT_BOT_AVATAR = 'https://api.dicebear.com/7.x/bottts/svg?seed=BotNoiTu';
   let BOT_AVATAR = DEFAULT_BOT_AVATAR;
-  let botsEnabled = true; // admin bật/tắt minigame
+  // Bật/tắt riêng lẻ từng bot: { botnt: true, botvtv: true, bott: true }
+  let botsEnabledMap = { botnt: true, botvtv: true, bott: true };
+
+  function readBotsEnabledMap(cfg) {
+    const bots = (cfg && cfg.bots) || {};
+    return {
+      botnt: (bots.botnt === false) ? false : true,
+      botvtv: (bots.botvtv === false) ? false : true,
+      bott: (bots.bott === false) ? false : true
+    };
+  }
 
   async function loadBotConfig() {
     try {
@@ -507,19 +517,19 @@
         } else {
           BOT_AVATAR = DEFAULT_BOT_AVATAR;
         }
-        botsEnabled = (cfg.botsEnabled === false) ? false : true;
+        botsEnabledMap = readBotsEnabledMap(cfg);
       } else {
         BOT_AVATAR = DEFAULT_BOT_AVATAR;
-        botsEnabled = true;
+        botsEnabledMap = { botnt: true, botvtv: true, bott: true };
       }
     } catch (e) {
       console.error('loadBotConfig', e);
       BOT_AVATAR = DEFAULT_BOT_AVATAR;
-      botsEnabled = true;
+      botsEnabledMap = { botnt: true, botvtv: true, bott: true };
     }
   }
 
-  // Lắng nghe đổi avatar + trạng thái bật/tắt bot realtime
+  // Lắng nghe đổi avatar + trạng thái bật/tắt từng bot realtime
   function listenBotConfig() {
     db.ref('bot_config').on('value', (snap) => {
       const cfg = snap.exists() ? (snap.val() || {}) : {};
@@ -528,13 +538,13 @@
       } else {
         BOT_AVATAR = DEFAULT_BOT_AVATAR;
       }
-      botsEnabled = (cfg.botsEnabled === false) ? false : true;
+      botsEnabledMap = readBotsEnabledMap(cfg);
     });
   }
 
-  function ensureBotsEnabled() {
-    if (botsEnabled) return true;
-    postBot('😴 Bot đang nghỉ. Vui lòng quay lại sau.');
+  function ensureBotEnabled(botId) {
+    if (botsEnabledMap[botId]) return true;
+    postBot('😴 Bot này đang nghỉ. Vui lòng quay lại sau.');
     return false;
   }
 
@@ -701,7 +711,7 @@
   }
 
   async function startBotGame() {
-    if (!ensureBotsEnabled()) return;
+    if (!ensureBotEnabled('botnt')) return;
     if (!WORD_LIST.length) {
       console.warn('Chưa có từ điển bot_words');
       return;
@@ -732,7 +742,7 @@
   }
 
   async function startScrambleGame() {
-    if (!ensureBotsEnabled()) return;
+    if (!ensureBotEnabled('botvtv')) return;
     if (!WORD_LIST.length) {
       console.warn('Chưa có từ điển bot_words');
       return;
@@ -817,7 +827,7 @@
   }
 
   async function startMathGame() {
-    if (!ensureBotsEnabled()) return;
+    if (!ensureBotEnabled('bott')) return;
     if (isChallengeActive()) {
       postBot('⚠️ Đang có ván chơi. Hãy đợi hết giờ hoặc ai đó trả lời xong rồi gọi lại.');
       return;
