@@ -515,8 +515,14 @@
     width:38px; height:38px; border-radius:50%; object-fit:cover;
     border:1px solid var(--border); background:var(--panel2); flex-shrink:0;
   }
-  .friendRow .fname{ flex:1; min-width:0; font-size:13.5px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .friendRow .fname{ flex:1; min-width:0; font-size:13.5px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:flex; align-items:center; gap:6px; }
   .friendRow .fsub{ font-size:11px; color:var(--muted); font-weight:400; margin-top:2px; }
+  .unreadDot{
+    display:inline-flex; align-items:center; justify-content:center;
+    min-width:18px; height:18px; padding:0 4px; border-radius:9px;
+    background:var(--danger); color:#fff; font-size:10.5px; font-weight:700;
+    box-shadow:0 0 6px rgba(255,77,109,0.6); flex-shrink:0;
+  }
   .friendRow .actions{ display:flex; gap:6px; flex-shrink:0; }
   .friendRow button{
     padding:7px 10px; border-radius:8px; font-size:11.5px; font-weight:700;
@@ -624,6 +630,7 @@
       <div class="friendsBtnWrap">
         <button type="button" id="friendsBtn" title="Bạn bè">👥</button>
         <span class="friendReqBadge" id="friendReqBadge">0</span>
+        <span class="friendReqBadge" id="unreadTotalBadge" style="background:var(--neon2); right:auto; left:-4px;">0</span>
       </div>
     </div>
   </header>
@@ -2031,6 +2038,8 @@
   let currentPCFriendKey = null;
   let currentPCFriendName = '';
   let currentPCPairKey = null;
+  let unreadByFriend = {};     // { friendKey: count } tin nhắn riêng chưa đọc
+  const pcListenersAttached = {}; // { pairKey: true } tránh gắn listener trùng khi đếm unread
 
   function pairKeyOf(a, b){
     return [a, b].sort().join('__');
@@ -2049,11 +2058,74 @@
     document.getElementById('tabDotRequests').classList.toggle('show', n > 0);
   }
 
+  function updateUnreadTotalBadge(){
+    const total = Object.values(unreadByFriend).reduce((a,b) => a + (b||0), 0);
+    const el = document.getElementById('unreadTotalBadge');
+    el.textContent = total > 99 ? '99+' : String(total);
+    el.classList.toggle('show', total > 0);
+  }
+
+  // Gắn listener đếm tin chưa đọc cho 1 người bạn (chạy song song cho tất cả bạn bè)
+  function watchUnreadForFriend(friendKey){
+    if (!myKey || pcListenersAttached[friendKey]) return;
+    pcListenersAttached[friendKey] = true;
+    const pk = pairKeyOf(myKey, friendKey);
+    const lastReadRef = usersRef.child(myKey).child('lastRead').child(pk);
+    let lastReadTs = 0;
+    lastReadRef.on('value', (snap) => {
+      lastReadTs = snap.val() || 0;
+      recomputeUnread(friendKey, pk, lastReadTs);
+    });
+    privateMessagesRef.child(pk).limitToLast(50).on('value', (snap) => {
+      recomputeUnread(friendKey, pk, lastReadTs, snap.val());
+    });
+  }
+
+  function recomputeUnread(friendKey, pk, lastReadTs, msgsVal){
+    const compute = (val) => {
+      let count = 0;
+      const obj = val || {};
+      Object.keys(obj).forEach(k => {
+        const m = obj[k];
+        if (m && m.from !== myKey && (m.time || 0) > lastReadTs) count++;
+      });
+      unreadByFriend[friendKey] = count;
+      updateUnreadTotalBadge();
+      if (friendsOverlay.classList.contains('open') && friendsCurrentTab === 'friends') {
+        renderFriendsTabList();
+      }
+    };
+    if (msgsVal !== undefined) {
+      compute(msgsVal);
+    } else {
+      privateMessagesRef.child(pk).limitToLast(50).get().then(s => compute(s.val()));
+    }
+  }
+
+  function unwatchAllUnread(){
+    Object.keys(pcListenersAttached).forEach(fk => {
+      const pk = pairKeyOf(myKey, fk);
+      usersRef.child(myKey).child('lastRead').child(pk).off();
+      privateMessagesRef.child(pk).off();
+      delete pcListenersAttached[fk];
+    });
+    unreadByFriend = {};
+    updateUnreadTotalBadge();
+  }
+
+  async function markPrivateChatRead(pairKey){
+    if (!myKey || !pairKey) return;
+    try {
+      await usersRef.child(myKey).child('lastRead').child(pairKey).set(Date.now());
+    } catch (e) { /* bỏ qua lỗi nhỏ */ }
+  }
+
   function listenFriendsData(){
     if (!myName) return;
     myKey = toKey(myName);
     usersRef.child(myKey).child('friends').on('value', (snap) => {
       myFriends = snap.val() || {};
+      Object.keys(myFriends).forEach(fk => watchUnreadForFriend(fk));
       if (friendsOverlay.classList.contains('open') && friendsCurrentTab === 'friends') {
         renderFriendsTabList();
       }
@@ -2072,6 +2144,7 @@
       usersRef.child(myKey).child('friends').off();
       friendRequestsRef.child(myKey).off();
     }
+    unwatchAllUnread();
     myFriends = {};
     incomingRequests = {};
     myKey = '';
@@ -2117,11 +2190,15 @@
     keys.forEach(fk => {
       const udata = users[fk] || { displayName: myFriends[fk] };
       const name = udata.displayName || myFriends[fk] || fk;
+      const unread = unreadByFriend[fk] || 0;
+      const unreadHtml = unread > 0
+        ? '<span class="unreadDot">' + (unread > 99 ? '99+' : unread) + '</span>'
+        : '';
       const row = document.createElement('div');
       row.className = 'friendRow';
       row.innerHTML =
         '<img src="' + friendAvatarUrl(fk, udata) + '" alt="avt">' +
-        '<div class="fname">' + escapeHtml(name) + '</div>' +
+        '<div class="fname">' + escapeHtml(name) + unreadHtml + '</div>' +
         '<div class="actions">' +
           '<button type="button" class="chatBtn">💬 Nhắn tin</button>' +
           '<button type="button" class="ghostBtn unfriendBtn">Huỷ kết bạn</button>' +
@@ -2250,12 +2327,16 @@
     pcMessages.innerHTML = '';
     privateChatOverlay.classList.add('open');
     listenPrivateMessages();
+    markPrivateChatRead(currentPCPairKey);
     setTimeout(() => pcMsgInput.focus(), 100);
   }
 
   function closePrivateChat(){
     privateChatOverlay.classList.remove('open');
-    if (currentPCPairKey) privateMessagesRef.child(currentPCPairKey).off();
+    if (currentPCPairKey) {
+      privateMessagesRef.child(currentPCPairKey).off();
+      markPrivateChatRead(currentPCPairKey);
+    }
     currentPCFriendKey = null;
     currentPCPairKey = null;
   }
@@ -2266,6 +2347,10 @@
     privateMessagesRef.child(currentPCPairKey).limitToLast(150).on('child_added', (snap) => {
       renderPrivateMessage(snap.val());
       pcMessages.scrollTop = pcMessages.scrollHeight;
+      // Nếu đang mở đúng phòng chat này, đánh dấu đã đọc ngay khi tin mới tới
+      if (privateChatOverlay.classList.contains('open') && currentPCPairKey) {
+        markPrivateChatRead(currentPCPairKey);
+      }
     });
   }
 
