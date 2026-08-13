@@ -145,6 +145,15 @@
     color:var(--success); padding:4px 10px; border-radius:20px;
     font-size:12px; font-weight:700;
   }
+  .botBudgeBadge{
+    background:rgba(124,77,255,0.15); border:1px solid var(--neon2);
+    color:var(--neon2); padding:4px 10px; border-radius:20px;
+    font-size:12px; font-weight:700; white-space:nowrap;
+  }
+  .botBudgeBadge.empty{
+    border-color:var(--danger); color:var(--danger);
+    background:rgba(255,77,109,0.15);
+  }
 
   #messages{
     flex:1; overflow-y:auto; padding:16px;
@@ -241,6 +250,13 @@
     width:32px; height:32px; border-radius:50%;
     object-fit:cover; flex-shrink:0;
     border:1px solid var(--border); background:var(--panel2);
+  }
+  .msgAvatar.botAvatar{
+    cursor:pointer; transition:0.15s;
+  }
+  .msgAvatar.botAvatar:hover{
+    transform:scale(1.08);
+    box-shadow:0 0 12px rgba(0,229,255,0.6);
   }
   .msgRow .msg{ max-width:100%; }
 
@@ -372,6 +388,7 @@
       <h2 id="headerName"></h2>
     </div>
     <div class="userInfo">
+      <span class="botBudgeBadge" id="botBudgeDisplay" title="Xu thưởng bot còn lại hôm nay">🤖 100/100</span>
       <span class="xuBadge" id="xuDisplay">💰 0 xu</span>
     </div>
   </header>
@@ -635,6 +652,94 @@
   const SCRAMBLE_TIME_LIMIT = 30000;
   const MATH_TIME_LIMIT = 20000;
 
+  // ========== NGÂN SÁCH XU THƯỞNG CỦA BOT (giới hạn theo ngày) ==========
+  const botBudgetRef = db.ref('bot_budget');
+  const BOT_DAILY_BUDGET = 100;
+  let currentBotBudget = BOT_DAILY_BUDGET; // số xu thưởng bot còn lại hôm nay (ước tính từ Firebase)
+
+  function todayKey() {
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
+
+  function effectiveBudgetValue(val) {
+    const key = todayKey();
+    if (!val || val.date !== key || typeof val.remaining !== 'number') return BOT_DAILY_BUDGET;
+    return val.remaining;
+  }
+
+  function updateBotBudgetDisplay() {
+    const el = document.getElementById('botBudgeDisplay');
+    if (!el) return;
+    el.textContent = `🤖 ${Math.max(0, currentBotBudget)}/${BOT_DAILY_BUDGET}`;
+    el.classList.toggle('empty', currentBotBudget <= 0);
+  }
+
+  function listenBotBudget() {
+    botBudgetRef.on('value', (snap) => {
+      currentBotBudget = effectiveBudgetValue(snap.exists() ? snap.val() : null);
+      updateBotBudgetDisplay();
+    });
+  }
+
+  // delta âm = trừ (bot thưởng xu), delta dương = cộng (người chơi ủng hộ xu cho bot)
+  // Trả về { committed, remaining }
+  async function adjustBotBudget(delta) {
+    const key = todayKey();
+    try {
+      const result = await botBudgetRef.transaction((cur) => {
+        let base = effectiveBudgetValue(cur && cur.date === key ? cur : null);
+        let next = base + delta;
+        if (next < 0) next = 0;
+        if (next > BOT_DAILY_BUDGET) next = BOT_DAILY_BUDGET;
+        return { date: key, remaining: next };
+      });
+      const val = result.snapshot.exists() ? result.snapshot.val() : null;
+      return { committed: !!result.committed, remaining: effectiveBudgetValue(val) };
+    } catch (e) {
+      console.error('adjustBotBudget', e);
+      return { committed: false, remaining: currentBotBudget };
+    }
+  }
+
+  // Kiểm tra còn ngân sách để gọi bot chơi game không
+  function hasBotBudget() {
+    return currentBotBudget > 0;
+  }
+
+  function notifyBotBudgetEmpty() {
+    showSpamWarn('🤖 Bot đã hết xu thưởng hôm nay! Hãy bấm vào avatar của bot để ủng hộ xu, giúp bot tiếp tục chơi.');
+  }
+
+  // Ủng hộ xu cho bot (bấm vào avatar bot trong chat)
+  async function donateToBot() {
+    if (!myName) return;
+    const raw = await askPrompt('Nhập số xu muốn ủng hộ cho bot', 'text');
+    if (!raw) return;
+    const amount = parseInt(String(raw).trim(), 10);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      showSpamWarn('⚠️ Số xu không hợp lệ.');
+      return;
+    }
+    if (amount > myXu) {
+      showSpamWarn('⚠️ Bạn không đủ xu để ủng hộ.');
+      return;
+    }
+    myXu -= amount;
+    updateXuDisplay();
+    try {
+      await saveXu();
+      await adjustBotBudget(amount);
+      postBot(`Cảm ơn ${myName} đã ủng hộ ${amount} xu! 🙏`);
+    } catch (e) {
+      myXu += amount;
+      updateXuDisplay();
+      await saveXu();
+      showSpamWarn('⚠️ Ủng hộ thất bại, thử lại sau.');
+    }
+  }
+
   function normalize(str) {
     // NFC để thống nhất dấu tiếng Việt (tránh lệch tổ hợp ký tự)
     return (str || '').trim().toLowerCase().replace(/\s+/g, ' ').normalize('NFC');
@@ -752,6 +857,7 @@
 
   async function startBotGame() {
     if (!ensureBotEnabled('botnt')) return;
+    if (!hasBotBudget()) { notifyBotBudgetEmpty(); return; }
     if (!WORD_LIST.length) {
       console.warn('Chưa có từ điển bot_words');
       return;
@@ -782,6 +888,7 @@
 
   async function startScrambleGame() {
     if (!ensureBotEnabled('botvtv')) return;
+    if (!hasBotBudget()) { notifyBotBudgetEmpty(); return; }
     if (!WORD_LIST.length) {
       console.warn('Chưa có từ điển bot_words');
       return;
@@ -866,6 +973,7 @@
 
   async function startMathGame() {
     if (!ensureBotEnabled('bott')) return;
+    if (!hasBotBudget()) { notifyBotBudgetEmpty(); return; }
     if (isChallengeActive()) {
       return;
     }
@@ -960,6 +1068,7 @@
     myXu += reward;
     updateXuDisplay();
     await saveXu();
+    adjustBotBudget(-reward).catch(() => {});
     clearChallengeTimer();
 
     // Xóa challenge sau một nhịp ngắn để bot kịp đăng tin
@@ -1102,6 +1211,7 @@
     updateXuDisplay();
     listenMessages();
     listenChallenge(); // shared bot game state
+    listenBotBudget(); // ngân sách xu thưởng bot theo ngày
     setupShop();
   }
 
@@ -1183,6 +1293,12 @@
     av.alt = 'avt';
     if (isBot) {
       av.src = m.avatar || BOT_AVATAR || DEFAULT_BOT_AVATAR;
+      av.classList.add('botAvatar');
+      av.title = 'Bấm để ủng hộ xu cho bot';
+      av.addEventListener('click', (e) => {
+        e.stopPropagation();
+        donateToBot();
+      });
     } else if (m.avatar) {
       av.src = m.avatar;
     } else if (isMine && myAvatar) {
