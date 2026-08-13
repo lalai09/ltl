@@ -1275,12 +1275,22 @@
     return div.innerHTML;
   }
 
+  function isNearBottom(threshold){
+    threshold = threshold || 120;
+    return messagesDiv.scrollHeight - messagesDiv.scrollTop - messagesDiv.clientHeight < threshold;
+  }
+
   function listenMessages(){
     messagesDiv.innerHTML = '';
     messagesRef.limitToLast(100).on('child_added', (snap) => {
       const m = snap.val();
+      const wasNearBottom = isNearBottom();
+      const isOwnMsg = m && m.sender === myName;
       renderMessage(m);
-      scrollToBottom();
+      // Chỉ tự cuộn xuống nếu người dùng đang ở gần cuối, hoặc đây là tin nhắn của chính mình
+      if (wasNearBottom || isOwnMsg) {
+        scrollToBottom();
+      }
     });
   }
 
