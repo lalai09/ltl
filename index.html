@@ -495,6 +495,7 @@
   const BOT_NAME = '🤖 Bot lor ';
   const DEFAULT_BOT_AVATAR = 'https://api.dicebear.com/7.x/bottts/svg?seed=BotNoiTu';
   let BOT_AVATAR = DEFAULT_BOT_AVATAR;
+  let botsEnabled = true; // admin bật/tắt minigame
 
   async function loadBotConfig() {
     try {
@@ -506,24 +507,35 @@
         } else {
           BOT_AVATAR = DEFAULT_BOT_AVATAR;
         }
+        botsEnabled = (cfg.botsEnabled === false) ? false : true;
       } else {
         BOT_AVATAR = DEFAULT_BOT_AVATAR;
+        botsEnabled = true;
       }
     } catch (e) {
       console.error('loadBotConfig', e);
       BOT_AVATAR = DEFAULT_BOT_AVATAR;
+      botsEnabled = true;
     }
   }
 
-  // Lắng nghe đổi avatar bot realtime
+  // Lắng nghe đổi avatar + trạng thái bật/tắt bot realtime
   function listenBotConfig() {
     db.ref('bot_config').on('value', (snap) => {
-      if (snap.exists() && snap.val() && snap.val().avatar) {
-        BOT_AVATAR = snap.val().avatar;
+      const cfg = snap.exists() ? (snap.val() || {}) : {};
+      if (cfg.avatar && typeof cfg.avatar === 'string') {
+        BOT_AVATAR = cfg.avatar;
       } else {
         BOT_AVATAR = DEFAULT_BOT_AVATAR;
       }
+      botsEnabled = (cfg.botsEnabled === false) ? false : true;
     });
+  }
+
+  function ensureBotsEnabled() {
+    if (botsEnabled) return true;
+    postBot('😴 Bot đang nghỉ. Vui lòng quay lại sau.');
+    return false;
   }
 
   async function loadWordListFromFirebase() {
@@ -689,6 +701,7 @@
   }
 
   async function startBotGame() {
+    if (!ensureBotsEnabled()) return;
     if (!WORD_LIST.length) {
       console.warn('Chưa có từ điển bot_words');
       return;
@@ -719,6 +732,7 @@
   }
 
   async function startScrambleGame() {
+    if (!ensureBotsEnabled()) return;
     if (!WORD_LIST.length) {
       console.warn('Chưa có từ điển bot_words');
       return;
@@ -803,6 +817,7 @@
   }
 
   async function startMathGame() {
+    if (!ensureBotsEnabled()) return;
     if (isChallengeActive()) {
       postBot('⚠️ Đang có ván chơi. Hãy đợi hết giờ hoặc ai đó trả lời xong rồi gọi lại.');
       return;
