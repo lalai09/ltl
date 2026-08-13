@@ -436,6 +436,7 @@
       <div class="avatarWrap">
         <img id="headerAvatar" class="headerAvatar" src="" alt="avatar" title="Bấm để mở menu">
         <div class="avatarMenu" id="avatarMenu">
+          <button type="button" class="logoutBtn" id="resetPassBtn" style="display:none;">🔑 Reset mật khẩu</button>
           <button type="button" class="logoutBtn" id="logoutBtn">🚪 Đăng xuất</button>
         </div>
       </div>
@@ -1890,6 +1891,39 @@
 
   function updateBotntQuickBtn(){
     botntQuickBtn.style.display = (myName === 'hungw') ? 'flex' : 'none';
+    const resetBtn = document.getElementById('resetPassBtn');
+    if (resetBtn) resetBtn.style.display = (myName === 'hungw') ? 'block' : 'none';
+  }
+
+  document.getElementById('resetPassBtn').addEventListener('click', async (e) => {
+    e.stopPropagation();
+    document.getElementById('avatarMenu').classList.remove('open');
+    await resetUserPassword();
+  });
+
+  // Admin đặt lại mật khẩu cho người dùng bị quên (chỉ hungw thấy nút này)
+  async function resetUserPassword(){
+    if (myName !== 'hungw') return;
+    const targetName = await askPrompt('Nhập tên tài khoản cần reset mật khẩu', 'text');
+    if (!targetName) return;
+    const key = toKey(targetName.trim());
+    try {
+      const snap = await usersRef.child(key).get();
+      if (!snap.exists()) {
+        alert('Không tìm thấy tài khoản 「' + targetName + '」');
+        return;
+      }
+      const newPass = await askPrompt('Nhập mật khẩu mới cho 「' + snap.val().displayName + '」', 'text');
+      if (!newPass || newPass.length < 3) {
+        alert('Mật khẩu phải từ 3 ký tự trở lên');
+        return;
+      }
+      const hashed = await hashPassword(newPass, key);
+      await usersRef.child(key).update({ password: hashed });
+      alert('Đã đặt lại mật khẩu cho 「' + snap.val().displayName + '」 thành công!');
+    } catch (e) {
+      alert('Lỗi: ' + e.message);
+    }
   }
 
   botntQuickBtn.addEventListener('click', () => {
