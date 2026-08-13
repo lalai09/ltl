@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Tiến Lên Miền Nam - Online</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    height: 100dvh;
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: none;
+  }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: radial-gradient(ellipse at center, #1a5c3a 0%, #0d3320 100%);
+    color: #fff;
+    position: fixed;
+    inset: 0;
+    width: 100%;
+  }
+  .hidden { display: none !important; }
+
+  /* ---------- LOBBY / MENU ---------- */
+  #screen-menu {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 100%; padding: 20px; overflow-y: auto;
+  }
+  .logo {
+    font-size: 42px; font-weight: 800; margin-bottom: 30px; text-align: center;
+    text-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    color: #ffd54f;
+    letter-spacing: 1px;
+  }
+  .card-panel {
+    background: rgba(0,0,0,0.35);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 16px;
+    padding: 28px;
+    width: 100%; max-width: 380px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+  }
+  .card-panel h3 { margin-bottom: 14px; font-size: 18px; color: #ffd54f; }
+  input[type=text] {
+    width: 100%; padding: 12px 14px; border-radius: 10px; border: none;
+    margin-bottom: 12px; font-size: 15px; background: #fff; color: #222;
+  }
+  select {
+    width: 100%; padding: 12px 14px; border-radius: 10px; border: none;
+    margin-bottom: 12px; font-size: 15px; background: #fff; color: #222;
+  }
+  button {
+    cursor: pointer; border: none; border-radius: 10px; font-weight: 700;
+    font-size: 15px; padding: 12px 18px; transition: transform 0.1s, filter 0.15s;
+  }
+  button:active { transform: scale(0.97); }
+  .btn-primary { background: linear-gradient(135deg,#ffd54f,#ffb300); color: #3a2a00; width: 100%; }
+  .btn-primary:hover { filter: brightness(1.08); }
+  .btn-secondary { background: rgba(255,255,255,0.15); color: #fff; width: 100%; margin-top: 10px; }
+  .btn-secondary:hover { background: rgba(255,255,255,0.25); }
+  .divider { text-align:center; opacity:0.6; margin: 16px 0; font-size: 13px; }
+  .err-msg { color: #ff8a80; font-size: 13px; margin-top: 8px; min-height: 16px; }
+
+  /* ---------- ROOM WAITING ---------- */
+  #screen-room {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 100%; padding: 20px; overflow-y: auto;
+  }
+  .room-code-box {
+    background: rgba(0,0,0,0.4); border-radius: 14px; padding: 18px 26px; text-align: center;
+    margin-bottom: 24px; border: 1px dashed #ffd54f;
+  }
+  .room-code-box .code { font-size: 32px; font-weight: 800; color: #ffd54f; letter-spacing: 4px; }
+  .room-code-box .label { font-size: 12px; opacity: 0.7; margin-bottom: 4px; }
+  .players-wait-list {
+    width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;
+  }
+  .player-slot {
+    background: rgba(255,255,255,0.08); border-radius: 12px; padding: 14px 18px;
+    display: flex; align-items: center; justify-content: space-between;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .player-slot.filled { border-color: #ffd54f33; background: rgba(255,213,79,0.08); }
+  .player-slot .pname { font-weight: 600; }
+  .player-slot .ptag { font-size: 11px; background: #ffd54f; color: #3a2a00; padding: 2px 8px; border-radius: 8px; font-weight: 700; }
+  .player-slot.empty { opacity: 0.4; font-style: italic; }
+  #room-msg { text-align: center; opacity: 0.8; margin-bottom: 14px; font-size: 14px; }
+
+  /* ---------- GAME TABLE ---------- */
+  #screen-game {
+    height: 100%; display: flex; flex-direction: column; overflow: hidden;
+    padding: 8px; position: relative;
+  }
+  .table-top-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 10px; font-size: 13px; opacity: 0.85;
+  }
+  .table-top-bar .room-tag { background: rgba(0,0,0,0.3); padding: 4px 10px; border-radius: 8px; }
+  .btn-leave { background: rgba(255,255,255,0.15); color:#fff; padding: 6px 12px; font-size: 12px; }
+
+  .table-area {
+    flex: 1; position: relative; display: flex; align-items: center; justify-content: center;
+    min-height: 380px;
+  }
+  .opponent-slot {
+    position: absolute; text-align: center; min-width: 90px;
+  }
+  .opp-top { top: 0; left: 50%; transform: translateX(-50%); }
+  .opp-left { left: 4px; top: 50%; transform: translateY(-50%); }
+  .opp-right { right: 4px; top: 50%; transform: translateY(-50%); }
+  .opp-name {
+    background: rgba(0,0,0,0.45); padding: 5px 12px; border-radius: 20px; font-size: 12px;
+    display: inline-block; margin-bottom: 6px; border: 2px solid transparent;
+  }
+  .opp-name.active-turn { border-color: #ffd54f; box-shadow: 0 0 12px #ffd54f88; }
+  .opp-name .cnt { color: #ffd54f; font-weight: 800; }
+  .opp-cards { display: flex; justify-content: center; gap: -8px; }
+  .opp-cards .mini-card {
+    width: 22px; height: 30px; background: linear-gradient(135deg,#1976d2,#0d47a1);
+    border: 1px solid #fff; border-radius: 4px; margin-left: -12px;
+  }
+  .opp-cards .mini-card:first-child { margin-left: 0; }
+  .opp-last-play { margin-top: 6px; display:flex; gap:2px; justify-content:center; flex-wrap: wrap; }
+
+  .center-play-area {
+    position: relative; min-height: 130px; width: 100%; max-width: 480px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px;
+  }
+  .last-play-label { font-size: 12px; opacity: 0.7; }
+  .played-cards { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; min-height: 84px; align-items:center; }
+  .turn-indicator {
+    font-size: 14px; font-weight: 700; color: #ffd54f; text-align: center;
+    animation: pulse 1.4s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
+
+  .playing-card {
+    width: 52px; height: 74px; background: #fff; border-radius: 6px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-weight: 800; box-shadow: 0 2px 5px rgba(0,0,0,0.4); user-select: none;
+    border: 1px solid #ccc;
+  }
+  .playing-card .rank { font-size: 15px; line-height: 1; }
+  .playing-card .suit { font-size: 18px; line-height: 1; }
+  .playing-card.red { color: #d32f2f; }
+  .playing-card.black { color: #212121; }
+
+  .my-area {
+    padding: 10px 4px 4px;
+  }
+  .my-info {
+    display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 8px;
+  }
+  .my-name-tag {
+    background: rgba(0,0,0,0.35); padding: 5px 14px; border-radius: 20px; font-size: 13px; border: 2px solid transparent;
+  }
+  .my-name-tag.active-turn { border-color: #ffd54f; box-shadow: 0 0 12px #ffd54f88; }
+
+  .my-hand {
+    display: flex; justify-content: center; gap: 0; padding: 6px 0 4px;
+    overflow-x: auto; min-height: 100px; align-items: flex-end;
+  }
+  .my-card {
+    width: 58px; height: 82px; background: #fff; border-radius: 7px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-weight: 800; box-shadow: 0 2px 6px rgba(0,0,0,0.4); user-select: none;
+    border: 1px solid #ccc; margin-left: -22px; cursor: pointer;
+    transition: transform 0.15s, margin 0.15s, box-shadow 0.15s;
+    flex-shrink: 0; position: relative;
+  }
+  .my-card:first-child { margin-left: 0; }
+  .my-card.red { color: #d32f2f; }
+  .my-card.black { color: #212121; }
+  .my-card .rank { font-size: 16px; line-height: 1; }
+  .my-card .suit { font-size: 20px; line-height: 1; }
+  .my-card.selected { transform: translateY(-18px); box-shadow: 0 -4px 12px #ffd54faa; z-index: 5; border-color: #ffd54f; }
+
+  .action-bar {
+    display: flex; gap: 10px; justify-content: center; padding: 8px 6px 14px; flex-wrap: wrap;
+  }
+  .action-bar button { min-width: 100px; }
+  .btn-play { background: linear-gradient(135deg,#66bb6a,#2e7d32); color: #fff; }
+  .btn-pass { background: linear-gradient(135deg,#ef5350,#c62828); color: #fff; }
+  .btn-sort { background: rgba(255,255,255,0.15); color: #fff; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .log-box {
+    position: absolute; top: 44px; left: 6px; width: 160px; max-height: 100px;
+    background: rgba(0,0,0,0.35); border-radius: 8px; padding: 6px 8px; font-size: 10.5px;
+    overflow-y: auto; opacity: 0.85; display: none;
+  }
+  @media (min-width: 700px) { .log-box { display: block; } }
+
+  .overlay-result {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: flex;
+    align-items: center; justify-content: center; z-index: 50; padding: 20px;
+  }
+  .result-box {
+    background: #1a5c3a; border: 2px solid #ffd54f; border-radius: 18px; padding: 30px;
+    text-align: center; max-width: 360px; width: 100%; box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+  }
+  .result-box h2 { color: #ffd54f; margin-bottom: 16px; font-size: 24px; }
+  .result-list { text-align: left; margin: 16px 0; }
+  .result-list div { padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 14px; }
+
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.85); padding: 10px 20px; border-radius: 20px; font-size: 13px;
+    z-index: 60; animation: fadein 0.2s;
+  }
+  @keyframes fadein { from{opacity:0; transform:translate(-50%,10px);} to{opacity:1; transform:translate(-50%,0);} }
+
+  /* ---------- MINI CHAT BUBBLE ---------- */
+  #chatBubbleBtn {
+    position: fixed; right: 14px; bottom: 14px; z-index: 80;
+    width: 52px; height: 52px; border-radius: 50%;
+    background: linear-gradient(135deg,#00e5ff,#7c4dff);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5), 0 0 14px rgba(0,229,255,0.4);
+    font-size: 24px; cursor: pointer; border: none; transition: transform 0.15s;
+  }
+  #chatBubbleBtn:active { transform: scale(0.92); }
+  #chatBubbleBadge {
+    position: absolute; top: -2px; right: -2px; background: #ff4d6d; color: #fff;
+    font-size: 10px; font-weight: 800; min-width: 18px; height: 18px; border-radius: 9px;
+    display: none; align-items: center; justify-content: center; padding: 0 4px;
+    border: 2px solid #0d3320;
+  }
+  #miniChatPanel {
+    position: fixed; right: 14px; bottom: 76px; z-index: 80;
+    width: 300px; max-width: calc(100vw - 28px); height: 380px; max-height: 60vh;
+    background: linear-gradient(145deg, #0f1c14, #0a140d);
+    border: 1px solid rgba(0,229,255,0.25);
+    border-radius: 16px; display: none; flex-direction: column; overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.55), 0 0 20px rgba(0,229,255,0.1);
+  }
+  #miniChatPanel.open { display: flex; }
+  .miniChatHeader {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px; background: rgba(255,255,255,0.05);
+    border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 13px; font-weight: 700;
+  }
+  .miniChatHeader .mcTitle { display:flex; align-items:center; gap:6px; color:#8ef2ff; }
+  .miniChatHeader .mcClose {
+    background: none; width: 26px; height: 26px; border-radius: 50%; color: #fff; font-size: 16px;
+    display:flex; align-items:center; justify-content:center; opacity:0.7;
+  }
+  .miniChatHeader .mcClose:hover { opacity: 1; background: rgba(255,255,255,0.1); }
+  #miniChatMessages {
+    flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px;
+    touch-action: pan-y;
+  }
+  .mcRow { display: flex; gap: 6px; align-items: flex-end; max-width: 90%; }
+  .mcRow.mine { align-self: flex-end; flex-direction: row-reverse; }
+  .mcRow.theirs { align-self: flex-start; }
+  .mcAvatar {
+    width: 24px; height: 24px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,0.2); background: #1a1a2a;
+  }
+  .mcBubble {
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px; padding: 6px 10px; font-size: 12.5px; line-height: 1.35;
+    word-wrap: break-word; max-width: 100%;
+  }
+  .mcRow.mine .mcBubble {
+    background: linear-gradient(135deg, rgba(0,229,255,0.22), rgba(124,77,255,0.22));
+    border-color: rgba(0,229,255,0.35);
+  }
+  .mcRow.mine .mcName { display: none; }
+  .mcName { font-size: 10px; font-weight: 700; color: #7c4dff; margin-bottom: 2px; }
+  .mcText { color: #eee; }
+  #miniChatInputBar {
+    display: flex; gap: 6px; padding: 8px; border-top: 1px solid rgba(255,255,255,0.08);
+    background: rgba(0,0,0,0.15);
+  }
+  #miniChatInput {
+    flex: 1; padding: 9px 12px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.15);
+    background: #0b1220; color: #fff; font-size: 13px; outline: none;
+  }
+  #miniChatInput:focus { border-color: #00e5ff; }
+  #miniChatSend {
+    width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg,#00e5ff,#7c4dff); display: flex; align-items: center; justify-content: center;
+  }
+  #miniChatSend svg { width: 16px; height: 16px; fill: #04101a; }
+</style>
+</head>
+<body>
+
+<!-- ===================== MENU SCREEN ===================== -->
+<div id="screen-menu">
+  <div class="logo">🃏 TIẾN LÊN<br><span style="font-size:22px;">Miền Nam Online</span></div>
+
+  <div class="card-panel">
+    <h3 id="welcome-name">Xin chào!</h3>
+
+    <div class="divider">— TẠO PHÒNG MỚI —</div>
+    <select id="select-max-players">
+      <option value="2">2 người chơi</option>
+      <option value="3">3 người chơi</option>
+      <option value="4" selected>4 người chơi</option>
+    </select>
+    <button class="btn-primary" onclick="createRoom()">🎮 Tạo phòng</button>
+
+    <div class="divider">— VÀO PHÒNG CÓ SẴN —</div>
+    <input type="text" id="input-room-code" placeholder="Nhập mã phòng (VD: AB12)" maxlength="6" style="text-transform:uppercase">
+    <button class="btn-secondary" onclick="joinRoom()">🚪 Vào phòng</button>
+
+    <div class="err-msg" id="menu-err"></div>
+  </div>
+
+  <button class="btn-secondary" id="btn-exit-chat" style="max-width:380px; margin-top:14px;" onclick="exitToChat()">⬅️ Thoát về Chat</button>
+</div>
+
+<!-- ===================== ROOM WAITING SCREEN ===================== -->
+<div id="screen-room" class="hidden">
+  <div class="room-code-box">
+    <div class="label">MÃ PHÒNG - CHIA SẺ CHO BẠN BÈ</div>
+    <div class="code" id="room-code-display">----</div>
+  </div>
+  <div id="room-msg">Đang chờ người chơi...</div>
+  <div class="players-wait-list" id="players-wait-list"></div>
+  <button class="btn-primary" id="btn-start-game" style="max-width:300px" onclick="startGame()" disabled>Bắt đầu game (cần chủ phòng)</button>
+  <button class="btn-secondary" style="max-width:300px" onclick="leaveRoom()">Rời phòng</button>
+  <button class="btn-secondary" style="max-width:300px" onclick="exitToChat()">⬅️ Thoát về Chat</button>
+</div>
+
+<!-- ===================== GAME SCREEN ===================== -->
+<div id="screen-game" class="hidden">
+  <div class="table-top-bar">
+    <div class="room-tag">Phòng: <b id="game-room-code">----</b></div>
+    <div style="display:flex; gap:8px;">
+      <button class="btn-leave" onclick="leaveRoom()">Rời phòng</button>
+      <button class="btn-leave" onclick="exitToChat()">⬅️ Về Chat</button>
+    </div>
+  </div>
+
+  <div class="log-box" id="log-box"></div>
+
+  <div class="table-area">
+    <div class="opponent-slot opp-top hidden" id="opp-slot-0">
+      <div class="opp-name" id="opp-name-0"><span class="nm"></span> <span class="cnt"></span></div>
+      <div class="opp-cards" id="opp-cards-0"></div>
+    </div>
+    <div class="opponent-slot opp-left hidden" id="opp-slot-1">
+      <div class="opp-name" id="opp-name-1"><span class="nm"></span> <span class="cnt"></span></div>
+      <div class="opp-cards" id="opp-cards-1"></div>
+    </div>
+    <div class="opponent-slot opp-right hidden" id="opp-slot-2">
+      <div class="opp-name" id="opp-name-2"><span class="nm"></span> <span class="cnt"></span></div>
+      <div class="opp-cards" id="opp-cards-2"></div>
+    </div>
+
+    <div class="center-play-area">
+      <div class="last-play-label" id="last-play-label">Bàn chưa có ai đánh</div>
+      <div class="played-cards" id="played-cards"></div>
+      <div class="turn-indicator" id="turn-indicator"></div>
+    </div>
+  </div>
+
+  <div class="my-area">
+    <div class="my-info">
+      <div class="my-name-tag" id="my-name-tag">Bạn</div>
+    </div>
+    <div class="my-hand" id="my-hand"></div>
+    <div class="action-bar">
+      <button class="btn-sort" onclick="sortHand()">🔀 Sắp xếp</button>
+      <button class="btn-pass" id="btn-pass" onclick="passTurn()">Bỏ lượt</button>
+      <button class="btn-play" id="btn-play" onclick="playSelected()">Đánh bài</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<!-- ===================== MINI CHAT BUBBLE ===================== -->
+<button id="chatBubbleBtn" title="Chat">
+  💬
+  <span id="chatBubbleBadge">0</span>
+</button>
+<div id="miniChatPanel">
+  <div class="miniChatHeader">
+    <div class="mcTitle">💬 Chat</div>
+    <button class="mcClose" id="mcCloseBtn">✕</button>
+  </div>
+  <div id="miniChatMessages"></div>
+  <div id="miniChatInputBar">
+    <input type="text" id="miniChatInput" placeholder="Nhắn gì đó..." maxlength="300" autocomplete="off">
+    <button id="miniChatSend"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   FIREBASE INIT
+===================================================================== */
+const firebaseConfig = {
+  apiKey: "AIzaSyDwXvlkSjsdsVBPC6PlBJ9ifH_XCk_K1Sc",
+  authDomain: "web-chantodi.firebaseapp.com",
+  databaseURL: "https://web-chantodi-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "web-chantodi",
+  storageBucket: "web-chantodi.firebasestorage.app",
+  messagingSenderId: "752920225796",
+  appId: "1:752920225796:web:66787bc84be2e192946d51",
+  measurementId: "G-76PRLRLG0N"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+/* =====================================================================
+   GLOBAL STATE
+===================================================================== */
+const urlParams = new URLSearchParams(window.location.search);
+const sharedUid = urlParams.get('uid');
+const sharedName = urlParams.get('name');
+
+let myId = sharedUid || localStorage.getItem('tl_myid') || ('p_' + Math.random().toString(36).slice(2, 10));
+localStorage.setItem('tl_myid', myId);
+let myName = (sharedName ? decodeURIComponent(sharedName) : '') || localStorage.getItem('tl_myname') || '';
+if (sharedName) localStorage.setItem('tl_myname', myName);
+let roomCode = null;
+let roomRef = null;
+let isHost = false;
+let selectedCards = [];
+let currentRoomData = null;
+let unsubscribeFn = null;
+
+/* =====================================================================
+   CARD LOGIC (Tiến Lên Miền Nam)
+   Rank order: 3 4 5 6 7 8 9 10 J Q K A 2
+   Suit order (for same rank tie-break, weakest->strongest): Spade < Club < Diamond < Heart (♠ ♣ ♦ ♥)
+===================================================================== */
+const RANKS = ['3','4','5','6','7','8','9','10','J','Q','K','A','2'];
+const SUITS = ['♠','♣','♦','♥']; // low -> high
+const SUIT_COLOR = { '♠':'black','♣':'black','♦':'red','♥':'red' };
+
+function rankValue(r){ return RANKS.indexOf(r); }
+function suitValue(s){ return SUITS.indexOf(s); }
+function cardValue(c){ return rankValue(c.rank) * 4 + suitValue(c.suit); }
+function cardId(c){ return c.rank + c.suit; }
+
+function makeDeck(){
+  const deck = [];
+  for (const r of RANKS) for (const s of SUITS) deck.push({rank:r, suit:s});
+  return deck;
+}
+function shuffle(arr){
+  for (let i = arr.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]] = [arr[j],arr[i]];
+  }
+  return arr;
+}
+
+// Sort hand ascending by value
+function sortCards(cards){
+  return [...cards].sort((a,b)=>cardValue(a)-cardValue(b));
+}
+
+// Classify a set of selected cards (already objects {rank,suit})
+// Returns {type, value} or null if invalid combo
+// types: single, pair, triple, quad(bomb), straight(len), pair-straight(len>=3 pairs consecutive - "bomb" too), 
+function classifyCombo(cards){
+  if (!cards || cards.length === 0) return null;
+  const sorted = sortCards(cards);
+  const n = sorted.length;
+
+  if (n === 1) return { type:'single', value: cardValue(sorted[0]), len:1, highCard: sorted[0] };
+
+  if (n === 2){
+    if (sorted[0].rank === sorted[1].rank)
+      return { type:'pair', value: cardValue(sorted[1]), len:2, highCard: sorted[1] };
+    return null;
+  }
+
+  if (n === 3){
+    if (sorted[0].rank===sorted[1].rank && sorted[1].rank===sorted[2].rank)
+      return { type:'triple', value: cardValue(sorted[2]), len:3, highCard: sorted[2] };
+    // straight of 3
+    if (isStraight(sorted)) return { type:'straight', value: cardValue(sorted[2]), len:3, highCard: sorted[2] };
+    return null;
+  }
+
+  if (n === 4){
+    if (sorted[0].rank===sorted[1].rank && sorted[2].rank===sorted[3].rank && sorted[1].rank===sorted[2].rank)
+      return { type:'quad', value: cardValue(sorted[3]), len:4, highCard: sorted[3], isBomb:true };
+    if (isStraight(sorted)) return { type:'straight', value: cardValue(sorted[3]), len:4, highCard: sorted[3] };
+    return null;
+  }
+
+  // n >= 5: could be straight, or pair-straight (3+ consecutive pairs = bomb)
+  if (isStraight(sorted)) return { type:'straight', value: cardValue(sorted[n-1]), len:n, highCard: sorted[n-1] };
+  if (isPairStraight(sorted)) return { type:'pairstraight', value: cardValue(sorted[n-1]), len:n, highCard: sorted[n-1], isBomb:true };
+
+  return null;
+}
+
+function isStraight(sorted){
+  // no 2's allowed in straight, no duplicate ranks
+  for (let i=0;i<sorted.length;i++){
+    if (sorted[i].rank === '2') return false;
+  }
+  for (let i=1;i<sorted.length;i++){
+    if (rankValue(sorted[i].rank) !== rankValue(sorted[i-1].rank)+1) return false;
+    if (sorted[i].rank === sorted[i-1].rank) return false;
+  }
+  return true;
+}
+
+function isPairStraight(sorted){
+  // must be even length >= 6 (3 pairs), consecutive pairs, no 2's
+  if (sorted.length % 2 !== 0 || sorted.length < 6) return false;
+  for (let i=0;i<sorted.length;i++) if (sorted[i].rank==='2') return false;
+  const pairs = [];
+  for (let i=0;i<sorted.length;i+=2){
+    if (sorted[i].rank !== sorted[i+1].rank) return false;
+    pairs.push(sorted[i].rank);
+  }
+  for (let i=1;i<pairs.length;i++){
+    if (rankValue(pairs[i]) !== rankValue(pairs[i-1])+1) return false;
+  }
+  return true;
+}
+
+// Determine if combo A can beat combo B (both classified). Handles bombs beating singles-2/pairs-2 etc.
+function canBeat(a, b){
+  if (!a) return false;
+  if (!b) return true; // starting a new turn, anything valid goes
+  // Bombs (quad or pairstraight>=3) beat non-bomb combos of any type, including single 2 / pair of 2
+  const aIsBomb = a.type==='quad' || a.type==='pairstraight';
+  const bIsBomb = b.type==='quad' || b.type==='pairstraight';
+
+  if (aIsBomb && !bIsBomb){
+    // bomb beats anything (except a bigger/equal bomb which is handled below by not being 'not bIsBomb')
+    return true;
+  }
+  if (aIsBomb && bIsBomb){
+    // compare bomb strength: quad of higher rank beats quad of lower rank;
+    // longer pairstraight beats shorter pairstraight; quad beats pairstraight (house rule: quad > pairstraight of same or lesser)
+    if (a.type==='quad' && b.type==='quad') return a.value > b.value;
+    if (a.type==='pairstraight' && b.type==='pairstraight'){
+      if (a.len !== b.len) return a.len > b.len;
+      return a.value > b.value;
+    }
+    if (a.type==='quad' && b.type==='pairstraight') return true;
+    if (a.type==='pairstraight' && b.type==='quad') return false;
+  }
+  if (!aIsBomb && bIsBomb) return false;
+
+  // Normal comparison: same type & same length required
+  if (a.type !== b.type) return false;
+  if (a.len !== b.len) return false;
+  return a.value > b.value;
+}
+
+/* =====================================================================
+   UI HELPERS
+===================================================================== */
+function showToast(msg){
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.getElementById('toast-container').appendChild(t);
+  setTimeout(()=>t.remove(), 2200);
+}
+
+function switchScreen(id){
+  ['screen-menu','screen-room','screen-game'].forEach(s=>{
+    document.getElementById(s).classList.toggle('hidden', s!==id);
+  });
+}
+
+function renderCardEl(card, cls){
+  const div = document.createElement('div');
+  div.className = cls + ' ' + SUIT_COLOR[card.suit];
+  div.innerHTML = `<div class="rank">${card.rank}</div><div class="suit">${card.suit}</div>`;
+  return div;
+}
+
+/* =====================================================================
+   ROOM CODE GEN
+===================================================================== */
+function genRoomCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i=0;i<4;i++) code += chars[Math.floor(Math.random()*chars.length)];
+  return code;
+}
+
+/* =====================================================================
+   MENU ACTIONS
+===================================================================== */
+function grabName(){
+  if (!myName){ document.getElementById('menu-err').textContent = 'Không xác định được tên tài khoản. Vui lòng vào lại từ trang Chat.'; return null; }
+  document.getElementById('menu-err').textContent = '';
+  return myName;
+}
+
+function exitToChat(){
+  if (roomRef){
+    roomRef.child('players/' + myId).remove();
+    if (unsubscribeFn) roomRef.off('value', unsubscribeFn);
+  }
+  window.location.href = '/';
+}
+
+async function createRoom(){
+  if (!grabName()) return;
+  const maxPlayers = parseInt(document.getElementById('select-max-players').value);
+  const code = genRoomCode();
+  const ref = db.ref('rooms/' + code);
+
+  const initialData = {
+    code: code,
+    maxPlayers: maxPlayers,
+    status: 'waiting',
+    hostId: myId,
+    createdAt: Date.now(),
+    players: {
+      [myId]: { name: myName, joinedAt: Date.now(), isHost: true, connected: true }
+    }
+  };
+  await ref.set(initialData);
+  enterRoom(code);
+}
+
+async function joinRoom(){
+  if (!grabName()) return;
+  let code = document.getElementById('input-room-code').value.trim().toUpperCase();
+  if (!code){ document.getElementById('menu-err').textContent = 'Vui lòng nhập mã phòng.'; return; }
+  const ref = db.ref('rooms/' + code);
+  const snap = await ref.once('value');
+  if (!snap.exists()){ document.getElementById('menu-err').textContent = 'Không tìm thấy phòng này.'; return; }
+  const data = snap.val();
+
+  if (data.status !== 'waiting'){
+    // allow rejoin if already a player (reconnect)
+    if (!data.players || !data.players[myId]){
+      document.getElementById('menu-err').textContent = 'Ván đấu đã bắt đầu, không thể vào phòng.';
+      return;
+    }
+  } else {
+    const playerCount = data.players ? Object.keys(data.players).length : 0;
+    if (playerCount >= data.maxPlayers && !(data.players && data.players[myId])){
+      document.getElementById('menu-err').textContent = 'Phòng đã đầy.';
+      return;
+    }
+  }
+
+  await ref.child('players/' + myId).set({ name: myName, joinedAt: Date.now(), isHost: false, connected: true });
+  enterRoom(code);
+}
+
+function enterRoom(code){
+  roomCode = code;
+  roomRef = db.ref('rooms/' + code);
+  document.getElementById('room-code-display').textContent = code;
+  document.getElementById('game-room-code').textContent = code;
+
+  // presence: remove player on disconnect (only from waiting room; keep data if game in progress for simplicity)
+  roomRef.child('players/' + myId + '/connected').onDisconnect().set(false);
+
+  switchScreen('screen-room');
+
+  if (unsubscribeFn) roomRef.off('value', unsubscribeFn);
+  unsubscribeFn = (snap) => onRoomUpdate(snap.val());
+  roomRef.on('value', unsubscribeFn);
+}
+
+function leaveRoom(){
+  if (roomRef){
+    roomRef.child('players/' + myId).remove();
+    roomRef.off('value', unsubscribeFn);
+    // if host leaves and room empty, could delete room - simple cleanup:
+    roomRef.once('value').then(snap=>{
+      const d = snap.val();
+      if (d && (!d.players || Object.keys(d.players).length===0)){
+        roomRef.remove();
+      }
+    });
+  }
+  roomCode = null; roomRef = null; isHost = false; selectedCards = [];
+  switchScreen('screen-menu');
+}
+
+window.addEventListener('beforeunload', ()=>{
+  if (roomRef){ roomRef.child('players/' + myId + '/connected').set(false); }
+});
+
+/* =====================================================================
+   ROOM WAITING RENDER
+===================================================================== */
+function onRoomUpdate(data){
+  if (!data){ 
+    showToast('Phòng đã bị đóng.');
+    switchScreen('screen-menu');
+    return;
+  }
+  currentRoomData = data;
+  isHost = data.hostId === myId;
+
+  if (data.status === 'waiting'){
+    renderWaitingRoom(data);
+    switchScreen('screen-room');
+  } else if (data.status === 'playing'){
+    switchScreen('screen-game');
+    renderGame(data);
+  } else if (data.status === 'finished'){
+    switchScreen('screen-game');
+    renderGame(data);
+    showResultOverlay(data);
+  }
+}
+
+function renderWaitingRoom(data){
+  const list = document.getElementById('players-wait-list');
+  list.innerHTML = '';
+  const players = data.players || {};
+  const playerIds = Object.keys(players).filter(pid=>players[pid]);
+  document.getElementById('room-msg').textContent = `Đang chờ người chơi (${playerIds.length}/${data.maxPlayers})...`;
+
+  for (let i=0;i<data.maxPlayers;i++){
+    const pid = playerIds[i];
+    const slot = document.createElement('div');
+    if (pid){
+      const p = players[pid];
+      slot.className = 'player-slot filled';
+      slot.innerHTML = `<span class="pname">${escapeHtml(p.name)}</span>` +
+        (p.isHost ? '<span class="ptag">CHỦ PHÒNG</span>' : (pid===myId ? '<span class="ptag">BẠN</span>' : ''));
+    } else {
+      slot.className = 'player-slot empty';
+      slot.textContent = 'Trống - đang chờ...';
+    }
+    list.appendChild(slot);
+  }
+
+  const btn = document.getElementById('btn-start-game');
+  if (isHost){
+    btn.disabled = playerIds.length < 2;
+    btn.textContent = playerIds.length < 2 ? 'Cần ít nhất 2 người chơi' : `Bắt đầu game (${playerIds.length} người)`;
+  } else {
+    btn.disabled = true;
+    btn.textContent = 'Chờ chủ phòng bắt đầu...';
+  }
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div'); d.textContent = s; return d.innerHTML;
+}
+
+/* =====================================================================
+   START GAME (host deals cards)
+===================================================================== */
+async function startGame(){
+  if (!isHost) return;
+  const snap = await roomRef.once('value');
+  const data = snap.val();
+  const players = data.players || {};
+  const playerIds = Object.keys(players).filter(pid=>players[pid]);
+  if (playerIds.length < 2) return;
+
+  const deck = shuffle(makeDeck());
+  const hands = {};
+  playerIds.forEach(pid => hands[pid] = []);
+
+  // deal round robin
+  let idx = 0;
+  while (deck.length > 0){
+    const pid = playerIds[idx % playerIds.length];
+    hands[pid].push(deck.pop());
+    idx++;
+  }
+
+  // find who has 3 of spades -> goes first
+  let firstPlayer = playerIds[0];
+  for (const pid of playerIds){
+    if (hands[pid].some(c=>c.rank==='3' && c.suit==='♠')) { firstPlayer = pid; break; }
+  }
+
+  const handsSorted = {};
+  playerIds.forEach(pid => handsSorted[pid] = sortCards(hands[pid]));
+
+  const gameState = {
+    status: 'playing',
+    turnOrder: playerIds,
+    hands: handsSorted,
+    currentTurn: firstPlayer,
+    lastPlay: null,        // {playerId, cards, combo}
+    lastPlayerWhoPlayed: null,
+    passedPlayers: {},     // reset each "trick"
+    finishedOrder: [],     // players who emptied hand, in order
+    log: [`Ván mới bắt đầu. ${players[firstPlayer].name} đi trước (có 3 bích).`],
+    turnCount: 0
+  };
+
+  await roomRef.update(gameState);
+}
+
+/* =====================================================================
+   GAME RENDER
+===================================================================== */
+function renderGame(data){
+  if (data.status === 'waiting') return;
+  const players = data.players || {};
+  const turnOrder = data.turnOrder || [];
+  const hands = data.hands || {};
+
+  document.getElementById('my-name-tag').textContent = myName;
+  document.getElementById('my-name-tag').classList.toggle('active-turn', data.currentTurn === myId);
+
+  // arrange opponents relative to me
+  const myIndex = turnOrder.indexOf(myId);
+  const others = [];
+  for (let i=1;i<turnOrder.length;i++){
+    others.push(turnOrder[(myIndex+i) % turnOrder.length]);
+  }
+  const slotMap = ['opp-slot-0','opp-slot-1','opp-slot-2']; // top, left, right (order depends on count)
+  // for 2 players: 1 opponent -> top
+  // for 3 players: 2 opponents -> left, top  (use slot1=left, slot0=top)
+  // for 4 players: 3 opponents -> left, top, right
+  let arrangement;
+  if (others.length === 1) arrangement = [others[0], null, null]; // top only
+  else if (others.length === 2) arrangement = [others[1], others[0], null]; // top, left
+  else arrangement = [others[1], others[0], others[2]]; // top, left, right
+
+  for (let i=0;i<3;i++){
+    const slotEl = document.getElementById(slotMap[i]);
+    const pid = arrangement[i];
+    if (!pid){ slotEl.classList.add('hidden'); continue; }
+    slotEl.classList.remove('hidden');
+    const p = players[pid] || { name: '???' };
+    const cardCount = (hands[pid] || []).length;
+    const nameEl = document.getElementById('opp-name-' + i);
+    nameEl.querySelector('.nm').textContent = p.name + (p.connected===false ? ' (mất kết nối)' : '');
+    nameEl.querySelector('.cnt').textContent = `(${cardCount} lá)`;
+    nameEl.classList.toggle('active-turn', data.currentTurn === pid);
+
+    const cardsEl = document.getElementById('opp-cards-' + i);
+    cardsEl.innerHTML = '';
+    const showCount = Math.min(cardCount, 13);
+    for (let c=0;c<showCount;c++){
+      const mc = document.createElement('div');
+      mc.className = 'mini-card';
+      cardsEl.appendChild(mc);
+    }
+    if (data.finishedOrder && data.finishedOrder.includes(pid)){
+      nameEl.querySelector('.cnt').textContent = '🏆 Về nhất' + (data.finishedOrder.indexOf(pid) > 0 ? ` (#${data.finishedOrder.indexOf(pid)+1})` : '');
+    }
+  }
+
+  // center play area
+  const playedEl = document.getElementById('played-cards');
+  const labelEl = document.getElementById('last-play-label');
+  playedEl.innerHTML = '';
+  if (data.lastPlay && data.lastPlay.cards && data.lastPlay.cards.length){
+    const playerName = players[data.lastPlay.playerId] ? players[data.lastPlay.playerId].name : '???';
+    labelEl.textContent = `${playerName} đánh:`;
+    data.lastPlay.cards.forEach(c => playedEl.appendChild(renderCardEl(c, 'playing-card')));
+  } else {
+    labelEl.textContent = 'Bàn chưa có ai đánh - ai cũng có thể ra bài';
+  }
+
+  const turnIndEl = document.getElementById('turn-indicator');
+  if (data.status === 'playing'){
+    if (data.currentTurn === myId){
+      turnIndEl.textContent = '👉 Đến lượt bạn!';
+    } else {
+      const p = players[data.currentTurn];
+      turnIndEl.textContent = `Đang chờ ${p ? p.name : '...'} đánh...`;
+    }
+  } else {
+    turnIndEl.textContent = '';
+  }
+
+  // my hand
+  const myHand = hands[myId] || [];
+  renderMyHand(myHand);
+
+  // buttons enable state
+  const myTurn = data.currentTurn === myId && data.status === 'playing';
+  const canPass = myTurn && data.lastPlay && data.lastPlay.playerId !== myId && data.lastPlay.cards && data.lastPlay.cards.length > 0;
+  document.getElementById('btn-play').disabled = !myTurn;
+  document.getElementById('btn-pass').disabled = !canPass;
+
+  // log
+  const logBox = document.getElementById('log-box');
+  const log = data.log || [];
+  logBox.innerHTML = log.slice(-12).map(l=>`<div>${escapeHtml(l)}</div>`).join('');
+  logBox.scrollTop = logBox.scrollHeight;
+}
+
+function renderMyHand(hand){
+  const handEl = document.getElementById('my-hand');
+  handEl.innerHTML = '';
+  // keep selection only for cards still in hand
+  selectedCards = selectedCards.filter(sc => hand.some(c=>cardId(c)===cardId(sc)));
+
+  hand.forEach(card => {
+    const el = renderCardEl(card, 'my-card');
+    const isSelected = selectedCards.some(sc=>cardId(sc)===cardId(card));
+    if (isSelected) el.classList.add('selected');
+    el.onclick = () => toggleCardSelect(card);
+    handEl.appendChild(el);
+  });
+}
+
+function toggleCardSelect(card){
+  const id = cardId(card);
+  const idx = selectedCards.findIndex(c=>cardId(c)===id);
+  if (idx >= 0) selectedCards.splice(idx,1);
+  else selectedCards.push(card);
+  if (currentRoomData) renderMyHand(currentRoomData.hands[myId] || []);
+}
+
+function sortHand(){
+  if (!currentRoomData) return;
+  const hand = currentRoomData.hands[myId] || [];
+  const sorted = sortCards(hand);
+  roomRef.child('hands/' + myId).set(sorted);
+}
+
+/* =====================================================================
+   PLAY / PASS ACTIONS
+===================================================================== */
+async function playSelected(){
+  if (!currentRoomData) return;
+  if (currentRoomData.currentTurn !== myId){ showToast('Chưa đến lượt bạn.'); return; }
+  if (selectedCards.length === 0){ showToast('Hãy chọn bài để đánh.'); return; }
+
+  const combo = classifyCombo(selectedCards);
+  if (!combo){ showToast('Bộ bài không hợp lệ.'); return; }
+
+  const lastPlay = currentRoomData.lastPlay;
+  const isNewTrick = !lastPlay || !lastPlay.cards || lastPlay.cards.length===0 || lastPlay.playerId === myId;
+  // note: if everyone else passed, lastPlay.playerId will already be reset to null by pass logic (see passTurn)
+
+  if (!isNewTrick){
+    const lastCombo = classifyCombo(lastPlay.cards);
+    if (!canBeat(combo, lastCombo)){
+      showToast('Bộ bài này không chặn được bài trên bàn.');
+      return;
+    }
+  }
+
+  const myHand = currentRoomData.hands[myId] || [];
+  const selectedIds = selectedCards.map(cardId);
+  const newHand = myHand.filter(c => !selectedIds.includes(cardId(c)));
+
+  const players = currentRoomData.players;
+  const turnOrder = currentRoomData.turnOrder;
+  const myIndex = turnOrder.indexOf(myId);
+
+  let finishedOrder = currentRoomData.finishedOrder ? [...currentRoomData.finishedOrder] : [];
+  let statusUpdate = 'playing';
+  let logMsg = `${players[myId].name} đánh ${selectedCards.length} lá (${describeCombo(combo)}).`;
+
+  if (newHand.length === 0 && !finishedOrder.includes(myId)){
+    finishedOrder.push(myId);
+    logMsg += ` 🎉 ${players[myId].name} đã về nhất!`;
+  }
+
+  // determine remaining active players (not finished)
+  const activePlayers = turnOrder.filter(pid => !finishedOrder.includes(pid));
+  let nextTurn;
+  if (activePlayers.length <= 1){
+    // game over
+    statusUpdate = 'finished';
+    // add remaining player(s) to finished order in hand-size order
+    turnOrder.forEach(pid=>{
+      if (!finishedOrder.includes(pid)) finishedOrder.push(pid);
+    });
+    nextTurn = null;
+    logMsg += ' Ván đấu kết thúc!';
+  } else {
+    // find next active player after me
+    let idx = myIndex;
+    do {
+      idx = (idx + 1) % turnOrder.length;
+    } while (finishedOrder.includes(turnOrder[idx]));
+    nextTurn = turnOrder[idx];
+  }
+
+  const updates = {
+    ['hands/' + myId]: newHand,
+    lastPlay: { playerId: myId, cards: selectedCards, comboType: combo.type },
+    currentTurn: nextTurn,
+    passedPlayers: {},
+    finishedOrder: finishedOrder,
+    status: statusUpdate,
+    log: [...(currentRoomData.log||[]), logMsg].slice(-40)
+  };
+
+  await roomRef.update(updates);
+  selectedCards = [];
+}
+
+function describeCombo(combo){
+  const names = { single:'Đơn', pair:'Đôi', triple:'Sám', straight:'Sảnh', quad:'Tứ quý (CHẶT)', pairstraight:'Đôi thông (CHẶT)' };
+  return names[combo.type] || combo.type;
+}
+
+async function passTurn(){
+  if (!currentRoomData) return;
+  if (currentRoomData.currentTurn !== myId){ showToast('Chưa đến lượt bạn.'); return; }
+  const lastPlay = currentRoomData.lastPlay;
+  if (!lastPlay || !lastPlay.cards || lastPlay.cards.length===0 || lastPlay.playerId === myId){
+    showToast('Bạn đang được đi trước, không thể bỏ lượt.');
+    return;
+  }
+
+  const players = currentRoomData.players;
+  const turnOrder = currentRoomData.turnOrder;
+  const finishedOrder = currentRoomData.finishedOrder || [];
+  const myIndex = turnOrder.indexOf(myId);
+
+  const passedPlayers = { ...(currentRoomData.passedPlayers||{}) };
+  passedPlayers[myId] = true;
+
+  // find next active player
+  let idx = myIndex;
+  do {
+    idx = (idx + 1) % turnOrder.length;
+  } while (finishedOrder.includes(turnOrder[idx]));
+  let nextTurn = turnOrder[idx];
+
+  let newLastPlay = lastPlay;
+  let logMsg = `${players[myId].name} bỏ lượt.`;
+
+  // if next active player is the one who made lastPlay, trick is over -> they get free turn
+  if (nextTurn === lastPlay.playerId){
+    newLastPlay = { playerId: null, cards: [] };
+    logMsg += ` Vòng bài kết thúc, ${players[lastPlay.playerId].name} được đánh bài mới.`;
+  }
+
+  const updates = {
+    currentTurn: nextTurn,
+    passedPlayers: passedPlayers,
+    lastPlay: newLastPlay,
+    log: [...(currentRoomData.log||[]), logMsg].slice(-40)
+  };
+
+  await roomRef.update(updates);
+  selectedCards = [];
+}
+
+/* =====================================================================
+   RESULT OVERLAY
+===================================================================== */
+let resultShown = false;
+function showResultOverlay(data){
+  if (resultShown) return;
+  resultShown = true;
+  const players = data.players || {};
+  const finishedOrder = data.finishedOrder || [];
+
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay-result';
+  const medals = ['🥇','🥈','🥉','🏅'];
+  const listHtml = finishedOrder.map((pid,i)=>
+    `<div>${medals[i]||'🏅'} ${escapeHtml(players[pid] ? players[pid].name : '???')}${pid===myId ? ' (Bạn)' : ''}</div>`
+  ).join('');
+
+  overlay.innerHTML = `
+    <div class="result-box">
+      <h2>🎉 Kết thúc ván đấu!</h2>
+      <div class="result-list">${listHtml}</div>
+      <button class="btn-primary" id="btn-play-again">Chơi lại</button>
+      <button class="btn-secondary" id="btn-back-menu">Về màn hình chính</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  document.getElementById('btn-play-again').onclick = async () => {
+    overlay.remove();
+    resultShown = false;
+    if (isHost){
+      await roomRef.update({ status: 'waiting', lastPlay: null, finishedOrder: [], log: [] });
+    } else {
+      showToast('Đang chờ chủ phòng bắt đầu ván mới...');
+    }
+  };
+  document.getElementById('btn-back-menu').onclick = () => {
+    overlay.remove();
+    resultShown = false;
+    leaveRoom();
+  };
+}
+
+/* =====================================================================
+   INIT: attempt auto-restore name
+===================================================================== */
+window.onload = () => {
+  const welcomeEl = document.getElementById('welcome-name');
+  if (myName) {
+    welcomeEl.textContent = 'Xin chào, ' + myName + '! 👋';
+  } else {
+    welcomeEl.textContent = 'Chưa xác định tài khoản';
+    document.getElementById('menu-err').textContent = 'Vui lòng vào game từ nút "🃏 Tiến Lên" trong trang Chat.';
+  }
+};
+
+/* =====================================================================
+   MINI CHAT BUBBLE (dùng chung Firebase với trang Chat chính)
+===================================================================== */
+(function(){
+  const chatMessagesRef = db.ref('chat_messages');
+  const mcMessagesEl = document.getElementById('miniChatMessages');
+  const mcPanel = document.getElementById('miniChatPanel');
+  const mcBtn = document.getElementById('chatBubbleBtn');
+  const mcBadge = document.getElementById('chatBubbleBadge');
+  const mcInput = document.getElementById('miniChatInput');
+  const mcSend = document.getElementById('miniChatSend');
+  const mcClose = document.getElementById('mcCloseBtn');
+
+  let mcOpen = false;
+  let unreadCount = 0;
+  let mcLoadedOnce = false;
+  const MAX_MSGS = 60;
+
+  function defaultAvatarUrl(name){
+    return 'https://api.dicebear.com/7.x/initials/svg?seed=' + encodeURIComponent(name || 'user');
+  }
+
+  function mcEscapeHtml(s){
+    const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML;
+  }
+
+  function mcRenderMessage(m){
+    if (!m || m.type === 'poll') return; // bỏ qua poll trong mini chat cho gọn
+    if (m.type === 'system'){
+      const div = document.createElement('div');
+      div.style.cssText = 'text-align:center;font-size:11px;opacity:0.6;font-style:italic;';
+      div.textContent = m.text || '';
+      mcMessagesEl.appendChild(div);
+      return;
+    }
+    const isMine = m.sender === myName;
+    const row = document.createElement('div');
+    row.className = 'mcRow ' + (isMine ? 'mine' : 'theirs');
+
+    const av = document.createElement('img');
+    av.className = 'mcAvatar';
+    av.alt = 'avt';
+    av.src = m.avatar || defaultAvatarUrl(m.sender || 'user');
+    av.onerror = function(){ this.src = defaultAvatarUrl(m.sender || 'user'); };
+
+    const bubble = document.createElement('div');
+    bubble.className = 'mcBubble';
+    bubble.innerHTML =
+      '<div class="mcName">' + mcEscapeHtml(m.sender || '???') + '</div>' +
+      '<div class="mcText">' + mcEscapeHtml(m.text || '').replace(/\n/g,'<br>') + '</div>';
+
+    row.appendChild(av);
+    row.appendChild(bubble);
+    mcMessagesEl.appendChild(row);
+  }
+
+  function mcScrollBottom(){
+    mcMessagesEl.scrollTop = mcMessagesEl.scrollHeight;
+  }
+
+  chatMessagesRef.limitToLast(MAX_MSGS).on('child_added', (snap) => {
+    const m = snap.val();
+    mcRenderMessage(m);
+    // giữ số lượng tin nhắn hiển thị gọn
+    while (mcMessagesEl.children.length > MAX_MSGS) mcMessagesEl.removeChild(mcMessagesEl.firstChild);
+
+    if (mcLoadedOnce){
+      mcScrollBottom();
+      const isMine = m && m.sender === myName;
+      if (!mcOpen && !isMine){
+        unreadCount++;
+        updateBadge();
+      }
+    }
+  });
+
+  // đánh dấu đã load xong batch ban đầu để không tính badge cho tin nhắn cũ
+  chatMessagesRef.limitToLast(MAX_MSGS).once('value', () => {
+    mcLoadedOnce = true;
+    mcScrollBottom();
+  });
+
+  function updateBadge(){
+    if (unreadCount > 0){
+      mcBadge.style.display = 'flex';
+      mcBadge.textContent = unreadCount > 9 ? '9+' : String(unreadCount);
+    } else {
+      mcBadge.style.display = 'none';
+    }
+  }
+
+  function openChat(){
+    mcOpen = true;
+    mcPanel.classList.add('open');
+    unreadCount = 0;
+    updateBadge();
+    mcScrollBottom();
+    setTimeout(()=>mcInput.focus(), 80);
+  }
+  function closeChat(){
+    mcOpen = false;
+    mcPanel.classList.remove('open');
+  }
+
+  mcBtn.addEventListener('click', () => {
+    if (mcOpen) closeChat(); else openChat();
+  });
+  mcClose.addEventListener('click', closeChat);
+
+  async function sendMc(){
+    const text = mcInput.value.trim();
+    if (!text) return;
+    if (!myName){ showToast('Không xác định được tài khoản.'); return; }
+    mcInput.value = '';
+    try {
+      await chatMessagesRef.push({
+        sender: myName,
+        text: text,
+        time: Date.now(),
+        type: 'text'
+      });
+    } catch(e){
+      showToast('Gửi tin nhắn lỗi: ' + e.message);
+    }
+  }
+  mcSend.addEventListener('click', sendMc);
+  mcInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMc(); });
+})();
+</script>
+</body>
+</html>
