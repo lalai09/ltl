@@ -962,6 +962,13 @@
     return name.trim().toLowerCase().replace(/[.#$\[\]\/]/g, '_');
   }
 
+  async function hashPassword(pass, saltKey){
+    const enc = new TextEncoder();
+    const data = enc.encode('ntf_salt_' + saltKey + '_' + pass);
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
   async function register(){
     const name = usernameInput.value.trim();
     const pass = passwordInput.value;
@@ -978,9 +985,10 @@
         setLoading(false);
         return;
       }
+      const hashed = await hashPassword(pass, key);
       await usersRef.child(key).set({
         displayName: name,
-        password: pass,
+        password: hashed,
         xu: 0,
         createdAt: Date.now()
       });
@@ -1007,7 +1015,20 @@
         return;
       }
       const data = snap.val();
-      if(data.password !== pass){
+      const storedPass = data.password || '';
+      const hashed = await hashPassword(pass, key);
+      const isHashFormat = /^[0-9a-f]{64}$/.test(storedPass);
+      let ok = false;
+      if (isHashFormat) {
+        ok = (storedPass === hashed);
+      } else {
+        // Tài khoản cũ còn lưu mật khẩu thô — kiểm tra rồi tự nâng cấp lên hash
+        ok = (storedPass === pass);
+        if (ok) {
+          try { await usersRef.child(key).update({ password: hashed }); } catch (e) {}
+        }
+      }
+      if (!ok){
         showMsg('Sai mật khẩu');
         setLoading(false);
         return;
