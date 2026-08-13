@@ -573,7 +573,6 @@
 
   function ensureBotEnabled(botId) {
     if (botsEnabledMap[botId]) return true;
-    postBot('😴 Bot này đang nghỉ. Vui lòng quay lại sau.');
     return false;
   }
 
@@ -747,7 +746,6 @@
     }
     // Đang có ván khác → không cho gọi
     if (isChallengeActive()) {
-      postBot('⚠️ Đang có ván chơi. Hãy đợi hết giờ hoặc ai đó trả lời xong rồi gọi lại.');
       return;
     }
     const first = pickRandomWord(new Set());
@@ -778,7 +776,6 @@
     }
     // Đang có ván khác → không cho gọi
     if (isChallengeActive()) {
-      postBot('⚠️ Đang có ván chơi. Hãy đợi hết giờ hoặc ai đó trả lời xong rồi gọi lại.');
       return;
     }
     let word = null;
@@ -858,7 +855,6 @@
   async function startMathGame() {
     if (!ensureBotEnabled('bott')) return;
     if (isChallengeActive()) {
-      postBot('⚠️ Đang có ván chơi. Hãy đợi hết giờ hoặc ai đó trả lời xong rồi gọi lại.');
       return;
     }
     const problem = generateMathProblem();
