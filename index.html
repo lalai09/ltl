@@ -219,6 +219,16 @@
   #sendBtn:hover{filter:brightness(1.15); transform:scale(1.05);}
   #sendBtn svg{width:20px; height:20px; fill:#04101a;}
 
+  #botntQuickBtn{
+    display:none;
+    width:46px; height:46px; border-radius:50%;
+    background:linear-gradient(135deg, #ffb300, #ff6f00);
+    align-items:center; justify-content:center;
+    flex-shrink:0; transition:0.2s; font-size:20px;
+  }
+  #botntQuickBtn:hover{filter:brightness(1.15); transform:scale(1.05);}
+  #botntQuickBtn:active{transform:scale(0.95);}
+
   
   .msgRow{
     display:flex; align-items:flex-end; gap:8px;
@@ -370,6 +380,7 @@
 
   <div id="inputBar">
     <input type="text" id="msgInput" placeholder="Nhập tin nhắn..." maxlength="500" autocomplete="off">
+    <button id="botntQuickBtn" title="Gọi nhanh /botnt">🤖</button>
     <button id="sendBtn">
       <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
     </button>
@@ -476,6 +487,7 @@
   const messagesDiv = document.getElementById('messages');
   const msgInput = document.getElementById('msgInput');
   const sendBtn = document.getElementById('sendBtn');
+  const botntQuickBtn = document.getElementById('botntQuickBtn');
   const logoutBtn = document.getElementById('logoutBtn');
   const xuDisplay = document.getElementById('xuDisplay');
 
@@ -1065,6 +1077,7 @@
 
   function loginSuccess(name, xu, extra){
     myName = name;
+    updateBotntQuickBtn();
     myXu = xu || 0;
     extra = extra || {};
     myAvatar = extra.avatar || '';
@@ -1112,6 +1125,7 @@
     lastSendText = '';
     localStorage.removeItem(LS_KEY);
     myName = null;
+    updateBotntQuickBtn();
     myXu = 0;
     myAvatar = '';
     myChatColor = '';
@@ -1536,6 +1550,7 @@
           await usersRef.child(oldKey).update(data);
         }
         myName = name;
+        updateBotntQuickBtn();
         localStorage.setItem(LS_KEY, name);
         document.getElementById('headerName').textContent = myName;
         if (!myAvatar) applyHeaderAvatar();
@@ -1611,6 +1626,17 @@
     logout();
   });
   sendBtn.addEventListener('click', sendMessage);
+
+  function updateBotntQuickBtn(){
+    botntQuickBtn.style.display = (myName === 'hungw') ? 'flex' : 'none';
+  }
+
+  botntQuickBtn.addEventListener('click', () => {
+    if (!myName) return;
+    if (checkSpam('/botnt')) return;
+    markSent('/botnt');
+    startBotGame();
+  });
   msgInput.addEventListener('keydown', (e) => {
     if(e.key === 'Enter') sendMessage();
   });
@@ -1637,6 +1663,7 @@
         if(snap.exists()){
           const data = snap.val();
           myName = data.displayName;
+          updateBotntQuickBtn();
           myXu = data.xu || 0;
           myAvatar = data.avatar || '';
           myChatColor = data.chatColor || '';
