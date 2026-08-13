@@ -1,0 +1,2216 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Chat </title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+  :root{
+    --bg:#0a0e17;
+    --panel:#111826;
+    --panel2:#161f2e;
+    --border:#233047;
+    --neon:#00e5ff;
+    --neon2:#7c4dff;
+    --text:#e6f1ff;
+    --muted:#7d8aa3;
+    --danger:#ff4d6d;
+    --success:#00e676;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html, body{ height:100%; }
+  body{
+    font-family:'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    background:radial-gradient(circle at 20% 10%, #0d1626 0%, #060a12 60%, #04060a 100%);
+    color:var(--text);
+    height:100vh;
+    height:100dvh;
+    overflow:hidden;
+  }
+  ::-webkit-scrollbar{width:8px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--border); border-radius:4px;}
+
+  /* ---------- LOGIN ---------- */
+  #loginScreen{
+    height:100vh; height:100dvh;
+    display:flex; align-items:center; justify-content:center;
+    padding:20px;
+  }
+  .loginBox{
+    background:linear-gradient(145deg, var(--panel), var(--panel2));
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:36px 30px;
+    width:100%; max-width:380px;
+    box-shadow:0 0 40px rgba(0,229,255,0.08), 0 10px 40px rgba(0,0,0,0.5);
+  }
+  .loginBox h1{
+    text-align:center; font-size:26px; margin-bottom:6px;
+    background:linear-gradient(90deg, var(--neon), var(--neon2));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .loginBox p.sub{
+    text-align:center; color:var(--muted); font-size:13px; margin-bottom:26px;
+  }
+  .field{ margin-bottom:16px; }
+  .field label{
+    display:block; font-size:12px; color:var(--muted); margin-bottom:6px;
+  }
+  .field input{
+    width:100%; padding:12px 14px;
+    background:#0b1220; border:1px solid var(--border);
+    border-radius:10px; color:var(--text); font-size:15px;
+    outline:none; transition:0.2s;
+  }
+  .field input:focus{
+    border-color:var(--neon);
+    box-shadow:0 0 0 3px rgba(0,229,255,0.15);
+  }
+  .btnRow{ display:flex; gap:10px; margin-top:22px; }
+  button{ cursor:pointer; font-family:inherit; border:none; }
+  .btnPrimary{
+    flex:1; padding:13px; border-radius:10px;
+    background:linear-gradient(90deg, var(--neon), var(--neon2));
+    color:#04101a; font-weight:700; font-size:15px; transition:0.2s;
+  }
+  .btnPrimary:hover{filter:brightness(1.1); transform:translateY(-1px);}
+  .btnPrimary:disabled{opacity:0.6; cursor:not-allowed; transform:none;}
+  .btnGhost{
+    flex:1; padding:13px; border-radius:10px;
+    background:transparent; border:1px solid var(--border);
+    color:var(--text); font-size:15px; transition:0.2s;
+  }
+  .btnGhost:hover{border-color:var(--neon2); color:var(--neon2);}
+  #loginMsg{
+    margin-top:14px; text-align:center; font-size:13px;
+    min-height:18px; color:var(--danger);
+  }
+
+  /* ---------- CHAT ---------- */
+  #chatScreen{
+    display:none; height:100vh; height:100dvh; flex-direction:column;
+  }
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 18px;
+    background:linear-gradient(90deg, var(--panel), var(--panel2));
+    border-bottom:1px solid var(--border);
+  }
+  header .title{ display:flex; align-items:center; gap:10px; }
+  header .title .dot{
+    width:10px; height:10px; border-radius:50%;
+    background:var(--success); box-shadow:0 0 8px var(--success);
+  }
+  .headerAvatar{
+    width:32px; height:32px; border-radius:50%;
+    object-fit:cover; border:1px solid var(--border); background:var(--panel2);
+    cursor:pointer; transition:0.15s;
+  }
+  .headerAvatar:hover{
+    border-color:var(--neon); box-shadow:0 0 0 2px rgba(0,229,255,0.25);
+  }
+  .avatarWrap{
+    position:relative; display:flex; align-items:center;
+  }
+  .avatarMenu{
+    display:none; position:absolute; top:calc(100% + 8px); left:0; z-index:50;
+    min-width:140px;
+    background:linear-gradient(145deg, var(--panel), var(--panel2));
+    border:1px solid var(--border); border-radius:10px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.45), 0 0 20px rgba(0,229,255,0.08);
+    padding:6px; overflow:hidden;
+  }
+  .avatarMenu.open{ display:block; animation:fadeIn 0.15s ease; }
+  .logoutBtn{
+    width:100%; padding:10px 14px; border-radius:8px;
+    background:transparent; border:none;
+    color:var(--muted); font-size:13px; text-align:left; transition:0.15s;
+  }
+  .logoutBtn:hover{ background:rgba(255,77,109,0.12); color:var(--danger); }
+  header h2{
+    font-size:17px;
+    background:linear-gradient(90deg, var(--neon), var(--neon2));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  header .userInfo{
+    display:flex; align-items:center; gap:12px;
+    font-size:13px; color:var(--muted);
+  }
+  header .userInfo b{color:var(--neon);}
+  .xuBadge{
+    background:rgba(0,230,118,0.15); border:1px solid var(--success);
+    color:var(--success); padding:4px 10px; border-radius:20px;
+    font-size:12px; font-weight:700;
+  }
+  .botBudgeBadge{
+    background:rgba(124,77,255,0.15); border:1px solid var(--neon2);
+    color:var(--neon2); padding:4px 10px; border-radius:20px;
+    font-size:12px; font-weight:700; white-space:nowrap;
+  }
+  .botBudgeBadge.empty{
+    border-color:var(--danger); color:var(--danger);
+    background:rgba(255,77,109,0.15);
+  }
+
+  #messages{
+    flex:1; overflow-y:auto; padding:16px;
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .msg{
+    max-width:75%; padding:10px 14px; border-radius:14px;
+    font-size:14.5px; line-height:1.4; word-wrap:break-word;
+    animation:fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn{
+    from{opacity:0; transform:translateY(6px);}
+    to{opacity:1; transform:translateY(0);}
+  }
+  .msg .name{
+    font-size:11.5px; font-weight:700; margin-bottom:3px; color:var(--neon2);
+  }
+  .msg .time{
+    font-size:10px; color:var(--muted); margin-top:4px; text-align:right;
+  }
+  .msg.mine{
+    align-self:flex-end;
+    background:linear-gradient(135deg, rgba(0,229,255,0.18), rgba(124,77,255,0.18));
+    border:1px solid rgba(0,229,255,0.3);
+    border-bottom-right-radius:4px;
+  }
+  .msg.mine .name{display:none;}
+  .msg.theirs{
+    align-self:flex-start;
+    background:var(--panel2); border:1px solid var(--border);
+    border-bottom-left-radius:4px;
+  }
+  .msg.bot{
+    align-self:flex-start;
+    background:linear-gradient(135deg, rgba(0,229,255,0.14), rgba(124,77,255,0.22));
+    border:1px solid var(--neon);
+    border-bottom-left-radius:4px;
+    box-shadow:0 0 12px rgba(0,229,255,0.35), 0 0 28px rgba(124,77,255,0.18), inset 0 0 20px rgba(0,229,255,0.06);
+  }
+  .msg.bot .name{
+    color:var(--neon);
+    text-shadow:0 0 8px rgba(0,229,255,0.55);
+  }
+  .msgRow.bot .msgAvatar{
+    border-color:var(--neon);
+    box-shadow:0 0 10px rgba(0,229,255,0.45);
+  }
+  .msg.system{
+    align-self:center; background:transparent;
+    color:var(--muted); font-size:12px; font-style:italic;
+  }
+
+  #inputBar{
+    display:flex; gap:10px; padding:14px 16px;
+    background:var(--panel); border-top:1px solid var(--border);
+  }
+  #msgInput{
+    flex:1; padding:13px 16px;
+    background:#0b1220; border:1px solid var(--border);
+    border-radius:24px; color:var(--text); font-size:15px; outline:none;
+  }
+  #msgInput:focus{
+    border-color:var(--neon);
+    box-shadow:0 0 0 3px rgba(0,229,255,0.12);
+  }
+  #sendBtn{
+    width:46px; height:46px; border-radius:50%;
+    background:linear-gradient(135deg, var(--neon), var(--neon2));
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0; transition:0.2s;
+  }
+  #sendBtn:hover{filter:brightness(1.15); transform:scale(1.05);}
+  #sendBtn svg{width:20px; height:20px; fill:#04101a;}
+
+  #botntQuickBtn{
+    display:none;
+    width:46px; height:46px; border-radius:50%;
+    background:linear-gradient(135deg, #ffb300, #ff6f00);
+    align-items:center; justify-content:center;
+    flex-shrink:0; transition:0.2s; font-size:20px;
+  }
+  #botntQuickBtn:hover{filter:brightness(1.15); transform:scale(1.05);}
+  #botntQuickBtn:active{transform:scale(0.95);}
+
+  
+  .msgRow{
+    display:flex; align-items:flex-end; gap:8px;
+    max-width:85%;
+    animation:fadeIn 0.2s ease;
+  }
+  .msgRow.mine{ align-self:flex-end; flex-direction:row-reverse; }
+  .msgRow.theirs, .msgRow.bot{ align-self:flex-start; }
+  .msgAvatar{
+    width:32px; height:32px; border-radius:50%;
+    object-fit:cover; flex-shrink:0;
+    border:1px solid var(--border); background:var(--panel2);
+  }
+  .msgAvatar.botAvatar{
+    cursor:pointer; transition:0.15s;
+  }
+  .msgAvatar.botAvatar:hover{
+    transform:scale(1.08);
+    box-shadow:0 0 12px rgba(0,229,255,0.6);
+  }
+  .msgRow .msg{ max-width:100%; }
+
+  @media(max-width:480px){
+    .msg{max-width:85%;}
+    header h2{font-size:15px;}
+    header .userInfo{font-size:11px;}
+  }
+
+  .xuBadge{ cursor:pointer; transition:0.15s; }
+  .xuBadge:hover{ filter:brightness(1.2); transform:scale(1.05); }
+
+  /* Shop modal */
+  #shopOverlay{
+    display:none; position:fixed; inset:0; z-index:1000;
+    background:rgba(0,0,0,0.65); backdrop-filter:blur(4px);
+    align-items:center; justify-content:center; padding:16px;
+  }
+  #shopOverlay.open{ display:flex; }
+  .shopBox{
+    background:linear-gradient(145deg, var(--panel), var(--panel2));
+    border:1px solid var(--border); border-radius:16px;
+    width:100%; max-width:420px; max-height:90vh; overflow-y:auto;
+    box-shadow:0 0 40px rgba(0,229,255,0.1), 0 12px 40px rgba(0,0,0,0.5);
+    padding:22px;
+  }
+  .shopBox h2{
+    font-size:20px; margin-bottom:4px;
+    background:linear-gradient(90deg, var(--neon), var(--neon2));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .shopSub{ color:var(--muted); font-size:12px; margin-bottom:16px; }
+  .shopItem{
+    display:flex; align-items:center; gap:10px;
+    padding:10px 12px; border:1px solid var(--border); border-radius:12px;
+    margin-bottom:8px; background:#0b1220;
+  }
+  .shopItem .icon{ font-size:24px; width:32px; text-align:center; flex-shrink:0; }
+  .shopItem .info{ flex:1; min-width:0; }
+  .shopItem .info .name{ font-weight:700; font-size:13.5px; }
+  .shopItem .info .desc{ font-size:11px; color:var(--muted); margin-top:2px; }
+  .shopItem .owned{
+    font-size:11px; color:var(--neon2); font-weight:700; white-space:nowrap;
+  }
+  .shopItem .price{
+    background:rgba(0,230,118,0.12); border:1px solid var(--success);
+    color:var(--success); padding:3px 9px; border-radius:16px;
+    font-size:11.5px; font-weight:700; white-space:nowrap;
+  }
+  .shopItem .actions{ display:flex; gap:6px; flex-shrink:0; }
+  .shopItem button{
+    padding:7px 11px; border-radius:8px; font-size:11.5px; font-weight:700;
+    background:linear-gradient(90deg, var(--neon), var(--neon2));
+    color:#04101a; border:none; cursor:pointer; white-space:nowrap;
+  }
+  .shopItem button:disabled{ opacity:0.45; cursor:not-allowed; }
+  .shopItem button.useBtn{
+    background:transparent; border:1px solid var(--neon2); color:var(--neon2);
+  }
+  .invSection{ margin-top:14px; }
+  .invSection h3{ font-size:13px; margin-bottom:8px; color:var(--neon); }
+
+  /* Hiệu ứng tin nhắn */
+  .effectSelectRow{
+    display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;
+  }
+  .effectChip{
+    padding:5px 10px; border-radius:14px; font-size:11px; cursor:pointer;
+    background:#0b1220; border:1px solid var(--border); color:var(--muted);
+  }
+  .effectChip.active{
+    border-color:var(--neon2); color:var(--neon2); background:rgba(124,77,255,0.12);
+  }
+
+  @keyframes msgGlow{
+    0%,100%{ box-shadow:0 0 8px rgba(0,229,255,0.35), 0 0 18px rgba(124,77,255,0.15); }
+    50%{ box-shadow:0 0 18px rgba(0,229,255,0.75), 0 0 34px rgba(124,77,255,0.45); }
+  }
+  .msg.fx-glow{ animation:msgGlow 1.6s ease-in-out infinite; }
+
+  @keyframes msgRainbow{
+    0%{ border-color:#ff4d6d; }
+    20%{ border-color:#ffb300; }
+    40%{ border-color:#00e676; }
+    60%{ border-color:#00e5ff; }
+    80%{ border-color:#7c4dff; }
+    100%{ border-color:#ff4d6d; }
+  }
+  .msg.fx-rainbow{ animation:msgRainbow 3s linear infinite; }
+
+  @keyframes msgShake{
+    0%,100%{ transform:translateX(0); }
+    20%{ transform:translateX(-3px); }
+    40%{ transform:translateX(3px); }
+    60%{ transform:translateX(-2px); }
+    80%{ transform:translateX(2px); }
+  }
+  .msg.fx-shake{ animation:msgShake 0.4s ease-in-out 1; }
+
+  .msg.fx-sparkle{ position:relative; overflow:visible; }
+  .msg.fx-sparkle::before, .msg.fx-sparkle::after{
+    content:'✨'; position:absolute; font-size:13px; opacity:0;
+    animation:sparklePop 1.4s ease-in-out 1;
+  }
+  .msg.fx-sparkle::before{ top:-8px; left:10px; animation-delay:0.1s; }
+  .msg.fx-sparkle::after{ bottom:-8px; right:14px; animation-delay:0.4s; }
+  @keyframes sparklePop{
+    0%{ opacity:0; transform:scale(0.4) translateY(4px); }
+    40%{ opacity:1; transform:scale(1.1) translateY(0); }
+    100%{ opacity:0; transform:scale(0.6) translateY(-4px); }
+  }
+  .shopClose{
+    margin-top:14px; width:100%; padding:11px; border-radius:10px;
+    background:transparent; border:1px solid var(--border); color:var(--muted);
+    cursor:pointer; font-size:14px;
+  }
+  .shopClose:hover{ border-color:var(--danger); color:var(--danger); }
+  .shopMsg{ font-size:12.5px; margin-top:8px; min-height:16px; text-align:center; }
+  .shopMsg.ok{ color:var(--success); }
+  .shopMsg.err{ color:var(--danger); }
+
+  /* prompt modal */
+  #promptOverlay{
+    display:none; position:fixed; inset:0; z-index:1100;
+    background:rgba(0,0,0,0.7); align-items:center; justify-content:center; padding:16px;
+  }
+  #promptOverlay.open{ display:flex; }
+  .promptBox{
+    background:var(--panel); border:1px solid var(--border); border-radius:14px;
+    padding:20px; width:100%; max-width:360px;
+  }
+  .promptBox h3{ font-size:16px; margin-bottom:10px; }
+  .promptBox input[type=text], .promptBox input[type=color]{
+    width:100%; padding:11px 12px; margin-bottom:12px;
+    background:#0b1220; border:1px solid var(--border); border-radius:10px;
+    color:var(--text); font-size:14px; outline:none;
+  }
+  .promptBox .btnRow{ display:flex; gap:8px; }
+  .promptBox .btnRow button{ flex:1; padding:11px; border-radius:10px; font-weight:700; cursor:pointer; border:none; font-size:14px; }
+  .promptOk{ background:linear-gradient(90deg, var(--neon), var(--neon2)); color:#04101a; }
+  .promptCancel{ background:transparent; border:1px solid var(--border)!important; color:var(--text); }
+
+  /* poll create modal */
+  #pollCreateOverlay{
+    display:none; position:fixed; inset:0; z-index:1100;
+    background:rgba(0,0,0,0.7); align-items:center; justify-content:center; padding:16px;
+  }
+  #pollCreateOverlay.open{ display:flex; }
+  .pollCreateBox{ max-width:400px; }
+  .pollCreateBox input[type=text]{
+    width:100%; padding:11px 12px; margin-bottom:10px;
+    background:#0b1220; border:1px solid var(--border); border-radius:10px;
+    color:var(--text); font-size:14px; outline:none;
+  }
+  .pollCreateBox input[type=text]:focus{ border-color:var(--neon); }
+  #pollQuestionInput{ font-weight:700; margin-bottom:14px; }
+  .pollAddOptionBtn{
+    width:100%; padding:9px; border-radius:8px; margin-top:2px;
+    background:transparent; border:1px dashed var(--border); color:var(--muted);
+    cursor:pointer; font-size:13px;
+  }
+  .pollAddOptionBtn:hover{ border-color:var(--neon2); color:var(--neon2); }
+
+  /* poll trong chat */
+  .pollCard{
+    background:var(--panel2); border:1px solid var(--neon2); border-radius:14px;
+    padding:14px; max-width:320px;
+    box-shadow:0 0 14px rgba(124,77,255,0.2);
+  }
+  .pollCard .pollQ{ font-weight:700; font-size:14.5px; margin-bottom:10px; color:var(--text); }
+  .pollOption{
+    position:relative; margin-bottom:8px; padding:9px 12px; border-radius:10px;
+    background:#0b1220; border:1px solid var(--border); cursor:pointer;
+    overflow:hidden; transition:0.15s;
+  }
+  .pollOption:hover{ border-color:var(--neon2); }
+  .pollOption.voted{ border-color:var(--neon); cursor:default; }
+  .pollOption .pollBar{
+    position:absolute; left:0; top:0; bottom:0;
+    background:linear-gradient(90deg, rgba(0,229,255,0.22), rgba(124,77,255,0.22));
+    z-index:0; transition:width 0.3s ease;
+  }
+  .pollOption .pollLabel{
+    position:relative; z-index:1; display:flex; justify-content:space-between;
+    font-size:13px; gap:8px;
+  }
+  .pollOption .pollPct{ color:var(--muted); font-weight:700; flex-shrink:0; }
+  .pollTotal{ font-size:11px; color:var(--muted); margin-top:4px; text-align:right; }
+
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+  <div class="loginBox">
+    <h1>💬 Chat</h1>
+    <p class="sub">Đăng nhập để tham gia phòng chat</p>
+
+    <form id="loginForm" autocomplete="off">
+      <div class="field">
+        <label>Tên đăng nhập</label>
+        <input type="text" id="username" name="ntf_user_field" placeholder="Nhập tên của bạn" maxlength="20" autocomplete="one-time-code" autocorrect="off" autocapitalize="off" spellcheck="false">
+      </div>
+      <div class="field">
+        <label>Mật khẩu</label>
+        <input type="text" id="password" name="ntf_pass_field" placeholder="Nhập mật khẩu" maxlength="30" autocomplete="one-time-code" autocorrect="off" autocapitalize="off" spellcheck="false" style="-webkit-text-security:disc; text-security:disc;">
+      </div>
+
+      <div class="btnRow">
+        <button class="btnGhost" id="registerBtn" type="button">Đăng ký</button>
+        <button class="btnPrimary" id="loginBtn" type="submit">Đăng nhập</button>
+      </div>
+    </form>
+    <div id="loginMsg"></div>
+  </div>
+</div>
+
+<!-- CHAT SCREEN -->
+<div id="chatScreen">
+  <header>
+    <div class="title">
+      <span class="dot"></span>
+      <div class="avatarWrap">
+        <img id="headerAvatar" class="headerAvatar" src="" alt="avatar" title="Bấm để mở menu">
+        <div class="avatarMenu" id="avatarMenu">
+          <button type="button" class="logoutBtn" id="resetPassBtn" style="display:none;">🔑 Reset mật khẩu</button>
+          <button type="button" class="logoutBtn" id="createPollBtn" style="display:none;">🗳️ Tạo bình chọn</button>
+          <button type="button" class="logoutBtn" id="logoutBtn">🚪 Đăng xuất</button>
+        </div>
+      </div>
+      <h2 id="headerName"></h2>
+    </div>
+    <div class="userInfo">
+      <span class="botBudgeBadge" id="botBudgeDisplay" title="Xu thưởng bot còn lại hôm nay">🤖 100/100</span>
+      <span class="xuBadge" id="xuDisplay">💰 0 xu</span>
+    </div>
+  </header>
+
+  <div id="messages"></div>
+
+  <div id="inputBar">
+    <input type="text" id="msgInput" placeholder="Nhập tin nhắn..." maxlength="500" autocomplete="off">
+    <button id="botntQuickBtn" title="Gọi nhanh /botnt">🤖</button>
+    <button id="sendBtn">
+      <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
+  </div>
+</div>
+
+
+<!-- SHOP -->
+<div id="shopOverlay">
+  <div class="shopBox">
+    <h2>🛒 Cửa hàng</h2>
+    <p class="shopSub">Xu hiện có: <b id="shopXu" style="color:var(--success)">0</b></p>
+
+    <div class="shopItem" data-item="rename">
+      <div class="icon">🏷️</div>
+      <div class="info">
+        <div class="name">Thẻ đổi tên</div>
+        <div class="desc">Sở hữu: <b id="invRename">0</b></div>
+      </div>
+      <div class="price">50 xu</div>
+      <div class="actions">
+        <button type="button" class="buyBtn" data-item="rename" data-price="50">Mua</button>
+        <button type="button" class="useBtn" data-use="rename">Dùng</button>
+      </div>
+    </div>
+    <div class="shopItem" data-item="avatar">
+      <div class="icon">🖼️</div>
+      <div class="info">
+        <div class="name">Thẻ đổi avatar</div>
+        <div class="desc">Sở hữu: <b id="invAvatar">0</b></div>
+      </div>
+      <div class="price">75 xu</div>
+      <div class="actions">
+        <button type="button" class="buyBtn" data-item="avatar" data-price="75">Mua</button>
+        <button type="button" class="useBtn" data-use="avatar">Dùng</button>
+      </div>
+    </div>
+    <div class="shopItem" data-item="color">
+      <div class="icon">🎨</div>
+      <div class="info">
+        <div class="name">Thẻ đổi màu chat</div>
+        <div class="desc">Sở hữu: <b id="invColor">0</b></div>
+      </div>
+      <div class="price">60 xu</div>
+      <div class="actions">
+        <button type="button" class="buyBtn" data-item="color" data-price="60">Mua</button>
+        <button type="button" class="useBtn" data-use="color">Dùng</button>
+      </div>
+    </div>
+    <div class="shopItem" data-item="fx_glow">
+      <div class="icon">💠</div>
+      <div class="info">
+        <div class="name">Hiệu ứng Phát sáng</div>
+        <div class="desc">Sở hữu: <b id="invFxGlow">0</b></div>
+      </div>
+      <div class="price">80 xu</div>
+      <div class="actions">
+        <button type="button" class="buyBtn" data-item="fx_glow" data-price="80">Mua</button>
+        <button type="button" class="useBtn effectChip" data-fx="glow">Dùng</button>
+      </div>
+    </div>
+    <div class="shopItem" data-item="fx_rainbow">
+      <div class="icon">🌈</div>
+      <div class="info">
+        <div class="name">Hiệu ứng Cầu vồng</div>
+        <div class="desc">Sở hữu: <b id="invFxRainbow">0</b></div>
+      </div>
+      <div class="price">80 xu</div>
+      <div class="actions">
+        <button type="button" class="buyBtn" data-item="fx_rainbow" data-price="80">Mua</button>
+        <button type="button" class="useBtn effectChip" data-fx="rainbow">Dùng</button>
+      </div>
+    </div>
+    <div class="shopItem" data-item="fx_shake">
+      <div class="icon">📳</div>
+      <div class="info">
+        <div class="name">Hiệu ứng Rung</div>
+        <div class="desc">Sở hữu: <b id="invFxShake">0</b></div>
+      </div>
+      <div class="price">80 xu</div>
+      <div class="actions">
+        <button type="button" class="buyBtn" data-item="fx_shake" data-price="80">Mua</button>
+        <button type="button" class="useBtn effectChip" data-fx="shake">Dùng</button>
+      </div>
+    </div>
+    <div class="shopItem" data-item="fx_sparkle">
+      <div class="icon">✨</div>
+      <div class="info">
+        <div class="name">Hiệu ứng Lấp lánh</div>
+        <div class="desc">Sở hữu: <b id="invFxSparkle">0</b></div>
+      </div>
+      <div class="price">80 xu</div>
+      <div class="actions">
+        <button type="button" class="buyBtn" data-item="fx_sparkle" data-price="80">Mua</button>
+        <button type="button" class="useBtn effectChip" data-fx="sparkle">Dùng</button>
+      </div>
+    </div>
+    <div class="shopItem">
+      <div class="icon">🚫</div>
+      <div class="info">
+        <div class="name">Tắt hiệu ứng</div>
+        <div class="desc">Hiệu ứng đang dùng: <b id="curFxLabel">Không có</b></div>
+      </div>
+      <div class="actions">
+        <button type="button" class="useBtn effectChip" data-fx="">Tắt</button>
+      </div>
+    </div>
+
+    <div id="shopMsg" class="shopMsg"></div>
+    <button type="button" class="shopClose" id="shopCloseBtn">Đóng</button>
+  </div>
+</div>
+
+<input type="file" id="avatarFileInput" accept="image/*" style="display:none">
+<div id="promptOverlay">
+  <div class="promptBox">
+    <h3 id="promptTitle">Nhập</h3>
+    <input type="text" id="promptText" placeholder="" style="display:none">
+    <input type="color" id="promptColor" value="#00e5ff" style="display:none; height:44px; padding:4px;">
+    <div class="btnRow">
+      <button type="button" class="promptCancel" id="promptCancelBtn">Huỷ</button>
+      <button type="button" class="promptOk" id="promptOkBtn">Xác nhận</button>
+    </div>
+  </div>
+</div>
+
+<!-- TẠO BÌNH CHỌN (admin) -->
+<div id="pollCreateOverlay">
+  <div class="promptBox pollCreateBox">
+    <h3>🗳️ Tạo bình chọn</h3>
+    <input type="text" id="pollQuestionInput" placeholder="Câu hỏi bình chọn..." maxlength="120">
+    <div id="pollOptionsWrap">
+      <input type="text" class="pollOptionInput" placeholder="Lựa chọn 1" maxlength="60">
+      <input type="text" class="pollOptionInput" placeholder="Lựa chọn 2" maxlength="60">
+    </div>
+    <button type="button" class="pollAddOptionBtn" id="pollAddOptionBtn">+ Thêm lựa chọn</button>
+    <div class="btnRow" style="margin-top:14px;">
+      <button type="button" class="promptCancel" id="pollCancelBtn">Huỷ</button>
+      <button type="button" class="promptOk" id="pollSubmitBtn">Tạo bình chọn</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ==== FIREBASE CONFIG ====
+  const firebaseConfig = {
+    apiKey: "AIzaSyDwXvlkSjsdsVBPC6PlBJ9ifH_XCk_K1Sc",
+    authDomain: "web-chantodi.firebaseapp.com",
+    databaseURL: "https://web-chantodi-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "web-chantodi",
+    storageBucket: "web-chantodi.firebasestorage.app",
+    messagingSenderId: "752920225796",
+    appId: "1:752920225796:web:66707bc84be2e19294d51",
+    measurementId: "G-76PRLRLG0N"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  const usersRef = db.ref('chat_users');
+  const messagesRef = db.ref('chat_messages');
+
+  const loginScreen = document.getElementById('loginScreen');
+  const chatScreen = document.getElementById('chatScreen');
+  const usernameInput = document.getElementById('username');
+  const passwordInput = document.getElementById('password');
+  const loginBtn = document.getElementById('loginBtn');
+  const registerBtn = document.getElementById('registerBtn');
+  const loginMsg = document.getElementById('loginMsg');
+  const messagesDiv = document.getElementById('messages');
+  const msgInput = document.getElementById('msgInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const botntQuickBtn = document.getElementById('botntQuickBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const xuDisplay = document.getElementById('xuDisplay');
+
+  // Fallback che mật khẩu bằng JS cho trình duyệt không hỗ trợ -webkit-text-security
+  (function setupMaskedPasswordInput(){
+    let realPass = '';
+    const MASK = '•';
+    passwordInput.addEventListener('input', (e) => {
+      const val = passwordInput.value;
+      const prevLen = realPass.length;
+      const curLen = val.length;
+      if (curLen > prevLen) {
+        // Ký tự mới gõ luôn nằm ở cuối chuỗi hiển thị (do không hỗ trợ paste giữa)
+        const added = val.slice(prevLen);
+        realPass += added.split('').filter(ch => ch !== MASK).join('') || added;
+      } else {
+        realPass = realPass.slice(0, curLen);
+      }
+      passwordInput.value = MASK.repeat(realPass.length);
+      passwordInput.dataset.real = realPass;
+    });
+    passwordInput.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text');
+      realPass += text;
+      passwordInput.value = MASK.repeat(realPass.length);
+      passwordInput.dataset.real = realPass;
+    });
+  })();
+
+  let myName = null;
+  let myXu = 0;
+  let myAvatar = '';
+  let myChatColor = '';
+  let myInv = { rename: 0, avatar: 0, color: 0, fx_glow: 0, fx_rainbow: 0, fx_shake: 0, fx_sparkle: 0 };
+  let myMsgEffect = '';
+  const LS_KEY = 'chatchung_login';
+
+  const SHOP_PRICES = { rename: 50, avatar: 30, color: 40, fx_glow: 80, fx_rainbow: 80, fx_shake: 80, fx_sparkle: 80 };
+  const FX_LABELS = { glow: '💠 Phát sáng', rainbow: '🌈 Cầu vồng', shake: '📳 Rung', sparkle: '✨ Lấp lánh' };
+
+  // ========== BOT NỐI TỪ ==========
+  // Word list loaded from Firebase path: bot_words
+  let WORD_LIST = [];
+  let wordSet = new Set();
+  let byFirst = {};
+
+  const BOT_NAME = '🤖 Bot lor ';
+  const DEFAULT_BOT_AVATAR = 'https://api.dicebear.com/7.x/bottts/svg?seed=BotNoiTu';
+  let BOT_AVATAR = DEFAULT_BOT_AVATAR;
+  // Bật/tắt riêng lẻ từng bot: { botnt: true, botvtv: true, bott: true }
+  let botsEnabledMap = { botnt: true, botvtv: true, bott: true };
+
+  function readBotsEnabledMap(cfg) {
+    const bots = (cfg && cfg.bots) || {};
+    return {
+      botnt: (bots.botnt === false) ? false : true,
+      botvtv: (bots.botvtv === false) ? false : true,
+      bott: (bots.bott === false) ? false : true
+    };
+  }
+
+  async function loadBotConfig() {
+    try {
+      const snap = await db.ref('bot_config').get();
+      if (snap.exists()) {
+        const cfg = snap.val() || {};
+        if (cfg.avatar && typeof cfg.avatar === 'string') {
+          BOT_AVATAR = cfg.avatar;
+        } else {
+          BOT_AVATAR = DEFAULT_BOT_AVATAR;
+        }
+        botsEnabledMap = readBotsEnabledMap(cfg);
+      } else {
+        BOT_AVATAR = DEFAULT_BOT_AVATAR;
+        botsEnabledMap = { botnt: true, botvtv: true, bott: true };
+      }
+    } catch (e) {
+      console.error('loadBotConfig', e);
+      BOT_AVATAR = DEFAULT_BOT_AVATAR;
+      botsEnabledMap = { botnt: true, botvtv: true, bott: true };
+    }
+  }
+
+  // Lắng nghe đổi avatar + trạng thái bật/tắt từng bot realtime
+  function listenBotConfig() {
+    db.ref('bot_config').on('value', (snap) => {
+      const cfg = snap.exists() ? (snap.val() || {}) : {};
+      if (cfg.avatar && typeof cfg.avatar === 'string') {
+        BOT_AVATAR = cfg.avatar;
+      } else {
+        BOT_AVATAR = DEFAULT_BOT_AVATAR;
+      }
+      botsEnabledMap = readBotsEnabledMap(cfg);
+    });
+  }
+
+  function ensureBotEnabled(botId) {
+    if (botsEnabledMap[botId]) return true;
+    return false;
+  }
+
+  async function loadWordListFromFirebase() {
+    try {
+      const snap = await db.ref('bot_words').get();
+      if (snap.exists()) {
+        const val = snap.val();
+        const norm = (s) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ').normalize('NFC');
+        if (Array.isArray(val)) {
+          WORD_LIST = val.map(norm).filter(Boolean);
+        } else {
+          // Support { word: true } OR { safeKey: "actual word" }
+          WORD_LIST = Object.entries(val).map(([k, v]) => {
+            if (typeof v === 'string' && v.trim()) return norm(v);
+            return norm(k);
+          }).filter(Boolean);
+        }
+        WORD_LIST = [...new Set(WORD_LIST)];
+      } else {
+        WORD_LIST = [];
+        console.warn('bot_words trống trên Firebase. Dùng admin để nạp từ.');
+      }
+    } catch (e) {
+      console.error('Load bot_words failed', e);
+      WORD_LIST = [];
+    }
+    // Rebuild indexes
+    wordSet = new Set(WORD_LIST);
+    byFirst = {};
+    WORD_LIST.forEach(w => {
+      const first = w.split(' ')[0];
+      if (!byFirst[first]) byFirst[first] = [];
+      byFirst[first].push(w);
+    });
+    console.log('Bot dictionary loaded:', WORD_LIST.length, 'words');
+  }
+
+  // ========== SHARED BOT GAMES (Firebase) ==========
+  // Ai trong chat cũng có thể trả lời challenge do người khác gọi
+  const challengeRef = db.ref('bot_challenge');
+  let currentChallenge = null; // cached from Firebase
+  let challengeTimer = null;
+  const NOITU_REWARD = 2;
+  const SCRAMBLE_REWARD = 5;
+  const MATH_REWARD = 4;
+  const NOITU_TIME_LIMIT = 15000;
+  const SCRAMBLE_TIME_LIMIT = 30000;
+  const MATH_TIME_LIMIT = 20000;
+
+  // ========== NGÂN SÁCH XU THƯỞNG CỦA BOT (giới hạn theo ngày) ==========
+  const botBudgetRef = db.ref('bot_budget');
+  const BOT_DAILY_BUDGET = 100;
+  let currentBotBudget = BOT_DAILY_BUDGET; // số xu thưởng bot còn lại hôm nay (ước tính từ Firebase)
+
+  function todayKey() {
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
+
+  function effectiveBudgetValue(val) {
+    const key = todayKey();
+    if (!val || val.date !== key || typeof val.remaining !== 'number') return BOT_DAILY_BUDGET;
+    return val.remaining;
+  }
+
+  function updateBotBudgetDisplay() {
+    const el = document.getElementById('botBudgeDisplay');
+    if (!el) return;
+    el.textContent = `🤖 ${Math.max(0, currentBotBudget)}/${BOT_DAILY_BUDGET}`;
+    el.classList.toggle('empty', currentBotBudget <= 0);
+  }
+
+  function listenBotBudget() {
+    botBudgetRef.on('value', (snap) => {
+      currentBotBudget = effectiveBudgetValue(snap.exists() ? snap.val() : null);
+      updateBotBudgetDisplay();
+    });
+  }
+
+  // delta âm = trừ (bot thưởng xu), delta dương = cộng (người chơi ủng hộ xu cho bot)
+  // Trả về { committed, remaining }
+  async function adjustBotBudget(delta) {
+    const key = todayKey();
+    try {
+      const result = await botBudgetRef.transaction((cur) => {
+        let base = effectiveBudgetValue(cur && cur.date === key ? cur : null);
+        let next = base + delta;
+        if (next < 0) next = 0;
+        if (next > BOT_DAILY_BUDGET) next = BOT_DAILY_BUDGET;
+        return { date: key, remaining: next };
+      });
+      const val = result.snapshot.exists() ? result.snapshot.val() : null;
+      return { committed: !!result.committed, remaining: effectiveBudgetValue(val) };
+    } catch (e) {
+      console.error('adjustBotBudget', e);
+      return { committed: false, remaining: currentBotBudget };
+    }
+  }
+
+  // Kiểm tra còn ngân sách để gọi bot chơi game không
+  function hasBotBudget() {
+    return currentBotBudget > 0;
+  }
+
+  function notifyBotBudgetEmpty() {
+    showSpamWarn('🤖 Bot đã hết xu thưởng hôm nay! Hãy bấm vào avatar của bot để ủng hộ xu, giúp bot tiếp tục chơi.');
+  }
+
+  // Ủng hộ xu cho bot (bấm vào avatar bot trong chat)
+  async function donateToBot() {
+    if (!myName) return;
+    if (currentBotBudget >= BOT_DAILY_BUDGET) {
+      showSpamWarn('🤖 Bot vẫn còn đủ xu thưởng hôm nay, chưa cần ủng hộ đâu!');
+      return;
+    }
+    const raw = await askPrompt('Nhập số xu muốn ủng hộ cho bot', 'text');
+    if (!raw) return;
+    let amount = parseInt(String(raw).trim(), 10);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      showSpamWarn('⚠️ Số xu không hợp lệ.');
+      return;
+    }
+    if (amount > myXu) {
+      showSpamWarn('⚠️ Bạn không đủ xu để ủng hộ.');
+      return;
+    }
+    // Chỉ lấy đúng phần bot còn thiếu, tránh mất xu thừa không cần thiết
+    const needed = BOT_DAILY_BUDGET - currentBotBudget;
+    if (needed <= 0) {
+      showSpamWarn('🤖 Bot vừa được ủng hộ đủ rồi, chưa cần thêm đâu!');
+      return;
+    }
+    if (amount > needed) amount = needed;
+
+    myXu -= amount;
+    updateXuDisplay();
+    try {
+      await saveXu();
+      await adjustBotBudget(amount);
+      postBot(`Cảm ơn ${myName} đã ủng hộ ${amount} xu! 🙏`);
+    } catch (e) {
+      myXu += amount;
+      updateXuDisplay();
+      await saveXu();
+      showSpamWarn('⚠️ Ủng hộ thất bại, thử lại sau.');
+    }
+  }
+
+  function normalize(str) {
+    // NFC để thống nhất dấu tiếng Việt (tránh lệch tổ hợp ký tự)
+    return (str || '').trim().toLowerCase().replace(/\s+/g, ' ').normalize('NFC');
+  }
+
+  function getLastSyllable(word) {
+    const parts = normalize(word).split(' ');
+    return parts[parts.length - 1];
+  }
+
+  function pickRandomWord(excludeSet) {
+    const candidates = WORD_LIST.filter(w => !excludeSet.has(w));
+    if (candidates.length === 0) return null;
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
+
+  function pickNextWord(lastSyllable, used) {
+    const list = (byFirst[lastSyllable] || []).filter(w => !used.has(w));
+    if (list.length === 0) return null;
+    return list[Math.floor(Math.random() * list.length)];
+  }
+
+  function postBot(text) {
+    messagesRef.push({
+      type: 'chat',
+      sender: BOT_NAME,
+      text: text,
+      time: Date.now(),
+      avatar: BOT_AVATAR,
+      fromBot: true
+    });
+    pruneOldMessages();
+  }
+
+  function postSystem(text) {
+    messagesRef.push({
+      type: 'system',
+      text: text,
+      time: Date.now()
+    });
+  }
+
+  // ========== TỰ ĐỘNG DỌN TIN NHẮN CŨ (giữ tối đa 200 tin gần nhất) ==========
+  const MAX_MESSAGES = 200;
+  let isPruning = false;
+
+  async function pruneOldMessages() {
+    if (isPruning) return;
+    isPruning = true;
+    try {
+      const snap = await messagesRef.orderByKey().get();
+      if (!snap.exists()) return;
+      const keys = [];
+      snap.forEach(child => { keys.push(child.key); });
+      if (keys.length <= MAX_MESSAGES) return;
+      const toRemoveCount = keys.length - MAX_MESSAGES;
+      const removeKeys = keys.slice(0, toRemoveCount);
+      const updates = {};
+      removeKeys.forEach(k => { updates[k] = null; });
+      await messagesRef.update(updates);
+    } catch (e) {
+      console.error('pruneOldMessages', e);
+    } finally {
+      isPruning = false;
+    }
+  }
+
+  function shuffleArray(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function scrambleWord(word) {
+    const chars = normalize(word).replace(/\s+/g, '').split('');
+    if (chars.length < 2) return null;
+    let scrambled = shuffleArray(chars);
+    const origJoined = chars.join('');
+    let tries = 0;
+    while (scrambled.join('') === origJoined && tries < 12) {
+      scrambled = shuffleArray(chars);
+      tries++;
+    }
+    return scrambled.join('/');
+  }
+
+  function clearChallengeTimer() {
+    if (challengeTimer) {
+      clearTimeout(challengeTimer);
+      challengeTimer = null;
+    }
+  }
+
+  function listenChallenge() {
+    challengeRef.on('value', (snap) => {
+      currentChallenge = snap.exists() ? snap.val() : null;
+    });
+  }
+
+  async function clearChallenge() {
+    clearChallengeTimer();
+    try {
+      await challengeRef.remove();
+    } catch (e) {
+      console.error('clearChallenge', e);
+    }
+  }
+
+  // Còn challenge đang mở (chưa giải, chưa hết giờ)?
+  function isChallengeActive() {
+    if (!currentChallenge || currentChallenge.solved) return false;
+    let limit = NOITU_TIME_LIMIT;
+    if (currentChallenge.type === 'scramble') limit = SCRAMBLE_TIME_LIMIT;
+    else if (currentChallenge.type === 'math') limit = MATH_TIME_LIMIT;
+    return Date.now() - (currentChallenge.startedAt || 0) <= limit;
+  }
+
+  // Hết giờ: thông báo (xáo chữ / toán thì hiện đáp án) rồi xóa challenge
+  function scheduleChallengeExpire(limitMs) {
+    clearChallengeTimer();
+    challengeTimer = setTimeout(async () => {
+      try {
+        const snap = await challengeRef.get();
+        if (snap.exists() && !snap.val().solved) {
+          const ch = snap.val();
+          if (ch.type === 'scramble') {
+            postBot(`⏰ Hết thời gian!\nĐáp án: 「${ch.original}」`);
+          } else if (ch.type === 'math') {
+            postBot(`⏰ Hết thời gian!\nĐáp án: ${ch.answer}`);
+          } else {
+            postBot(`⏰ Hết thời gian! Không ai trả lời đúng.`);
+          }
+          await challengeRef.remove();
+        }
+      } catch (e) {}
+    }, limitMs);
+  }
+
+  async function startBotGame() {
+    if (!ensureBotEnabled('botnt')) return;
+    if (!hasBotBudget()) { notifyBotBudgetEmpty(); return; }
+    if (!WORD_LIST.length) {
+      console.warn('Chưa có từ điển bot_words');
+      return;
+    }
+    // Đang có ván khác → không cho gọi
+    if (isChallengeActive()) {
+      return;
+    }
+    const first = pickRandomWord(new Set());
+    if (!first) return;
+
+    const payload = {
+      type: 'noitu',
+      lastWord: first,
+      startedBy: myName || '?',
+      startedAt: Date.now(),
+      solved: false,
+      solvedBy: null
+    };
+    try {
+      await challengeRef.set(payload);
+      postBot(`「${first}」`);
+      scheduleChallengeExpire(NOITU_TIME_LIMIT); // 15s
+    } catch (e) {
+      console.error('startBotGame', e);
+    }
+  }
+
+  async function startScrambleGame() {
+    if (!ensureBotEnabled('botvtv')) return;
+    if (!hasBotBudget()) { notifyBotBudgetEmpty(); return; }
+    if (!WORD_LIST.length) {
+      console.warn('Chưa có từ điển bot_words');
+      return;
+    }
+    // Đang có ván khác → không cho gọi
+    if (isChallengeActive()) {
+      return;
+    }
+    let word = null;
+    for (let i = 0; i < 30; i++) {
+      const cand = pickRandomWord(new Set());
+      if (!cand) break;
+      const clean = normalize(cand).replace(/\s+/g, '');
+      if (clean.length >= 3) {
+        word = cand;
+        break;
+      }
+    }
+    if (!word) word = pickRandomWord(new Set());
+    if (!word) return;
+
+    const display = scrambleWord(word);
+    if (!display) return;
+
+    const payload = {
+      type: 'scramble',
+      original: normalize(word),
+      display: display,
+      startedBy: myName || '?',
+      startedAt: Date.now(),
+      solved: false,
+      solvedBy: null
+    };
+    try {
+      await challengeRef.set(payload);
+      postBot(`🔀 「${display}」`);
+      scheduleChallengeExpire(SCRAMBLE_TIME_LIMIT); // 30s
+    } catch (e) {
+      console.error('startScrambleGame', e);
+    }
+  }
+
+  // ========== BOT TOÁN (/bott) ==========
+  function randInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  function generateMathProblem() {
+    // 0: cộng 2 số, 1: trừ 2 số, 2: cộng 3 số, 3: trừ 3 số, 4: nhân 1×2 chữ số
+    const kind = randInt(0, 4);
+    let a, b, expr, answer;
+    if (kind === 0) {
+      a = randInt(10, 99);
+      b = randInt(10, 99);
+      expr = a + ' + ' + b;
+      answer = a + b;
+    } else if (kind === 1) {
+      a = randInt(10, 99);
+      b = randInt(10, 99);
+      if (b > a) { const t = a; a = b; b = t; }
+      expr = a + ' - ' + b;
+      answer = a - b;
+    } else if (kind === 2) {
+      a = randInt(100, 999);
+      b = randInt(100, 999);
+      expr = a + ' + ' + b;
+      answer = a + b;
+    } else if (kind === 3) {
+      a = randInt(100, 999);
+      b = randInt(100, 999);
+      if (b > a) { const t = a; a = b; b = t; }
+      expr = a + ' - ' + b;
+      answer = a - b;
+    } else {
+      a = randInt(2, 9);
+      b = randInt(10, 99);
+      expr = a + ' × ' + b;
+      answer = a * b;
+    }
+    return { expr: expr, answer: answer };
+  }
+
+  async function startMathGame() {
+    if (!ensureBotEnabled('bott')) return;
+    if (!hasBotBudget()) { notifyBotBudgetEmpty(); return; }
+    if (isChallengeActive()) {
+      return;
+    }
+    const problem = generateMathProblem();
+    if (!problem) return;
+
+    const payload = {
+      type: 'math',
+      expression: problem.expr,
+      answer: problem.answer,
+      startedBy: myName || '?',
+      startedAt: Date.now(),
+      solved: false,
+      solvedBy: null
+    };
+    try {
+      await challengeRef.set(payload);
+      postBot('🧮 Giải nhanh (20s):\n' + problem.expr + ' = ?');
+      scheduleChallengeExpire(MATH_TIME_LIMIT); // 20s
+    } catch (e) {
+      console.error('startMathGame', e);
+    }
+  }
+
+  // Kiểm tra câu trả lời có khớp challenge hiện tại không (local check)
+  function isCorrectAnswer(ch, rawText) {
+    if (!ch || ch.solved) return false;
+    const text = normalize(rawText);
+    let limit = NOITU_TIME_LIMIT;
+    if (ch.type === 'scramble') limit = SCRAMBLE_TIME_LIMIT;
+    else if (ch.type === 'math') limit = MATH_TIME_LIMIT;
+    if (Date.now() - (ch.startedAt || 0) > limit) return false;
+
+    if (ch.type === 'noitu') {
+      if (!text.includes(' ') || text.split(' ').length !== 2) return false;
+      if (!wordSet.has(text)) return false;
+      const expected = getLastSyllable(ch.lastWord);
+      const actualFirst = text.split(' ')[0];
+      return actualFirst === expected;
+    }
+
+    if (ch.type === 'scramble') {
+      // Chỉ chấp nhận khớp đúng nguyên từ (có khoảng trắng).
+      // Không so bỏ space — tránh "hộ trì" ≡ "hột rì".
+      const orig = normalize(ch.original || '');
+      return text === orig;
+    }
+
+    if (ch.type === 'math') {
+      // Chỉ chấp nhận đúng số (cho phép khoảng trắng / dấu phẩy)
+      const cleaned = text.replace(/[\s,]/g, '');
+      if (!/^-?\d+$/.test(cleaned)) return false;
+      return parseInt(cleaned, 10) === Number(ch.answer);
+    }
+    return false;
+  }
+
+  // Ai trả lời đúng trước (transaction) thì được điểm
+  async function tryClaimAnswer(rawText) {
+    if (!myName || !currentChallenge) return null;
+    if (!isCorrectAnswer(currentChallenge, rawText)) return null;
+
+    const text = normalize(rawText);
+    let reward = NOITU_REWARD;
+    if (currentChallenge.type === 'scramble') reward = SCRAMBLE_REWARD;
+    else if (currentChallenge.type === 'math') reward = MATH_REWARD;
+    const type = currentChallenge.type;
+    let displayWord = text;
+    if (type === 'scramble') displayWord = currentChallenge.original;
+    else if (type === 'math') displayWord = String(currentChallenge.answer);
+
+    let claimed = false;
+    try {
+      const result = await challengeRef.transaction((cur) => {
+        if (!cur || cur.solved) return; // abort
+        if (!isCorrectAnswer(cur, rawText)) return; // abort (race)
+        cur.solved = true;
+        cur.solvedBy = myName;
+        cur.solvedAt = Date.now();
+        cur.answer = text;
+        return cur;
+      });
+      claimed = result.committed && result.snapshot.val() && result.snapshot.val().solvedBy === myName;
+    } catch (e) {
+      console.error('tryClaimAnswer', e);
+      return null;
+    }
+
+    if (!claimed) return null;
+
+    // Cộng xu cho người giải
+    myXu += reward;
+    updateXuDisplay();
+    await saveXu();
+    adjustBotBudget(-reward).catch(() => {});
+    clearChallengeTimer();
+
+    // Xóa challenge sau một nhịp ngắn để bot kịp đăng tin
+    setTimeout(() => { challengeRef.remove().catch(() => {}); }, 800);
+
+    return { correct: true, word: displayWord, reward, type };
+  }
+
+  async function saveXu() {
+    if (!myName) return;
+    const key = toKey(myName);
+    try {
+      await usersRef.child(key).update({ xu: myXu });
+    } catch (e) {
+      console.error('Save xu failed', e);
+    }
+  }
+
+  function updateXuDisplay() {
+    xuDisplay.textContent = `💰 ${myXu} xu`;
+  }
+
+  // ========== AUTH & CHAT ==========
+  function showMsg(text, isError=true){
+    loginMsg.style.color = isError ? 'var(--danger)' : 'var(--success)';
+    loginMsg.textContent = text;
+  }
+
+  function setLoading(loading){
+    loginBtn.disabled = loading;
+    registerBtn.disabled = loading;
+  }
+
+  function toKey(name){
+    return name.trim().toLowerCase().replace(/[.#$\[\]\/]/g, '_');
+  }
+
+  async function hashPassword(pass, saltKey){
+    const enc = new TextEncoder();
+    const data = enc.encode('ntf_salt_' + saltKey + '_' + pass);
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  async function register(){
+    const name = usernameInput.value.trim();
+    const pass = passwordInput.dataset.real || '';
+    if(!name || !pass){ showMsg('Vui lòng nhập đầy đủ tên và mật khẩu'); return; }
+    if(name.length < 2){ showMsg('Tên đăng nhập quá ngắn'); return; }
+    if(pass.length < 3){ showMsg('Mật khẩu phải từ 3 ký tự trở lên'); return; }
+
+    setLoading(true);
+    const key = toKey(name);
+    try{
+      const snap = await usersRef.child(key).get();
+      if(snap.exists()){
+        showMsg('Tên đăng nhập đã tồn tại, vui lòng đăng nhập');
+        setLoading(false);
+        return;
+      }
+      const hashed = await hashPassword(pass, key);
+      await usersRef.child(key).set({
+        displayName: name,
+        password: hashed,
+        xu: 0,
+        createdAt: Date.now()
+      });
+      showMsg('Đăng ký thành công! Đang đăng nhập...', false);
+      loginSuccess(name, 0);
+    }catch(e){
+      showMsg('Lỗi: ' + e.message);
+      setLoading(false);
+    }
+  }
+
+  async function login(){
+    const name = usernameInput.value.trim();
+    const pass = passwordInput.dataset.real || '';
+    if(!name || !pass){ showMsg('Vui lòng nhập đầy đủ tên và mật khẩu'); return; }
+
+    setLoading(true);
+    const key = toKey(name);
+    try{
+      const snap = await usersRef.child(key).get();
+      if(!snap.exists()){
+        showMsg('Tài khoản chưa tồn tại, hãy bấm Đăng ký');
+        setLoading(false);
+        return;
+      }
+      const data = snap.val();
+      const storedPass = data.password || '';
+      const hashed = await hashPassword(pass, key);
+      const isHashFormat = /^[0-9a-f]{64}$/.test(storedPass);
+      let ok = false;
+      if (isHashFormat) {
+        ok = (storedPass === hashed);
+      } else {
+        // Tài khoản cũ còn lưu mật khẩu thô — kiểm tra rồi tự nâng cấp lên hash
+        ok = (storedPass === pass);
+        if (ok) {
+          try { await usersRef.child(key).update({ password: hashed }); } catch (e) {}
+        }
+      }
+      if (!ok){
+        showMsg('Sai mật khẩu');
+        setLoading(false);
+        return;
+      }
+      loginSuccess(data.displayName, data.xu || 0, data);
+    }catch(e){
+      showMsg('Lỗi: ' + e.message);
+      setLoading(false);
+    }
+  }
+
+  function loginSuccess(name, xu, extra){
+    myName = name;
+    updateBotntQuickBtn();
+    myXu = xu || 0;
+    extra = extra || {};
+    myAvatar = extra.avatar || '';
+    myChatColor = extra.chatColor || '';
+    myInv = {
+      rename: (extra.inv && extra.inv.rename) || 0,
+      avatar: (extra.inv && extra.inv.avatar) || 0,
+      color: (extra.inv && extra.inv.color) || 0,
+      fx_glow: (extra.inv && extra.inv.fx_glow) || 0,
+      fx_rainbow: (extra.inv && extra.inv.fx_rainbow) || 0,
+      fx_shake: (extra.inv && extra.inv.fx_shake) || 0,
+      fx_sparkle: (extra.inv && extra.inv.fx_sparkle) || 0
+    };
+    myMsgEffect = extra.msgEffect || '';
+    localStorage.setItem(LS_KEY, name);
+    enterChat();
+  }
+
+  function enterChat(){
+    loginScreen.style.display = 'none';
+    chatScreen.style.display = 'flex';
+    loadWordListFromFirebase(); // sync dictionary from Firebase
+    loadBotConfig();
+    listenBotConfig();
+    document.getElementById('headerName').textContent = myName;
+    applyHeaderAvatar();
+    updateXuDisplay();
+    listenMessages();
+    listenChallenge(); // shared bot game state
+    listenBotBudget(); // ngân sách xu thưởng bot theo ngày
+    setupShop();
+  }
+
+  function applyHeaderAvatar(){
+    const el = document.getElementById('headerAvatar');
+    if (myAvatar) {
+      el.src = myAvatar;
+    } else {
+      el.src = 'https://api.dicebear.com/7.x/initials/svg?seed=' + encodeURIComponent(myName);
+    }
+  }
+
+  function defaultAvatarUrl(name){
+    return 'https://api.dicebear.com/7.x/initials/svg?seed=' + encodeURIComponent(name || 'user');
+  }
+
+  function logout(){
+    clearChallengeTimer();
+    currentChallenge = null;
+    lastSendAt = 0;
+    lastSendText = '';
+    localStorage.removeItem(LS_KEY);
+    myName = null;
+    updateBotntQuickBtn();
+    myXu = 0;
+    myAvatar = '';
+    myChatColor = '';
+    myInv = { rename: 0, avatar: 0, color: 0, fx_glow: 0, fx_rainbow: 0, fx_shake: 0, fx_sparkle: 0 };
+    myMsgEffect = '';
+    messagesRef.off();
+    challengeRef.off();
+    db.ref('bot_config').off();
+    messagesDiv.innerHTML = '';
+    chatScreen.style.display = 'none';
+    loginScreen.style.display = 'flex';
+    usernameInput.value = '';
+    passwordInput.value = '';
+    passwordInput.dataset.real = '';
+    loginMsg.textContent = '';
+  }
+
+  function formatTime(ts){
+    const d = new Date(ts);
+    return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+  }
+
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function isNearBottom(threshold){
+    threshold = threshold || 120;
+    return messagesDiv.scrollHeight - messagesDiv.scrollTop - messagesDiv.clientHeight < threshold;
+  }
+
+  function listenMessages(){
+    messagesDiv.innerHTML = '';
+    messagesRef.limitToLast(100).on('child_added', (snap) => {
+      const m = snap.val();
+      const wasNearBottom = isNearBottom();
+      const isOwnMsg = m && m.sender === myName;
+      renderMessage(m, snap.key);
+      // Chỉ tự cuộn xuống nếu người dùng đang ở gần cuối, hoặc đây là tin nhắn của chính mình
+      if (wasNearBottom || isOwnMsg) {
+        scrollToBottom();
+      }
+    });
+    // Cập nhật số phiếu bầu real-time cho các poll đang hiển thị
+    messagesRef.limitToLast(100).on('child_changed', (snap) => {
+      const m = snap.val();
+      if (m && m.type === 'poll') {
+        updatePollCardVotes(snap.key, m);
+      }
+    });
+  }
+
+  // ========== BÌNH CHỌN NHANH (POLL) — chỉ hungw tạo được ==========
+  function createPollMessage(question, options) {
+    const votes = {};
+    options.forEach((_, i) => { votes[i] = {}; }); // { optionIndex: { voterKey: name } }
+    return messagesRef.push({
+      type: 'poll',
+      question: question,
+      options: options,
+      votes: votes,
+      createdBy: myName || '?',
+      time: Date.now()
+    });
+  }
+
+  async function votePoll(pollKey, m, optionIndex) {
+    if (!myName) return;
+    const voterKey = toKey(myName);
+    // Kiểm tra đã bình chọn chưa (bất kỳ lựa chọn nào)
+    const votes = m.votes || {};
+    const alreadyVoted = Object.keys(votes).some(idx => votes[idx] && votes[idx][voterKey]);
+    if (alreadyVoted) return;
+    try {
+      await messagesRef.child(pollKey).child('votes').child(String(optionIndex)).child(voterKey).set(myName);
+    } catch (e) {
+      console.error('votePoll', e);
+    }
+  }
+
+  function pollTotalVotes(m) {
+    const votes = m.votes || {};
+    let total = 0;
+    Object.keys(votes).forEach(idx => {
+      total += Object.keys(votes[idx] || {}).length;
+    });
+    return total;
+  }
+
+  function pollMyVoteIndex(m) {
+    if (!myName) return -1;
+    const voterKey = toKey(myName);
+    const votes = m.votes || {};
+    for (const idx of Object.keys(votes)) {
+      if (votes[idx] && votes[idx][voterKey]) return parseInt(idx, 10);
+    }
+    return -1;
+  }
+
+  function renderPollMessage(m, pollKey) {
+    const row = document.createElement('div');
+    row.className = 'msgRow theirs';
+    row.dataset.pollRow = '1';
+
+    const av = document.createElement('img');
+    av.className = 'msgAvatar';
+    av.alt = 'avt';
+    av.src = defaultAvatarUrl(m.createdBy || 'poll');
+    av.onerror = function(){ this.src = defaultAvatarUrl('poll'); };
+
+    const card = document.createElement('div');
+    card.className = 'pollCard';
+    card.dataset.pollKey = pollKey || '';
+    row.appendChild(av);
+    row.appendChild(card);
+    messagesDiv.appendChild(row);
+
+    fillPollCard(card, m);
+  }
+
+  function fillPollCard(card, m) {
+    const total = pollTotalVotes(m);
+    const myVote = pollMyVoteIndex(m);
+    card.innerHTML = '';
+
+    const qEl = document.createElement('div');
+    qEl.className = 'pollQ';
+    qEl.textContent = '🗳️ ' + m.question;
+    card.appendChild(qEl);
+
+    (m.options || []).forEach((opt, i) => {
+      const count = m.votes && m.votes[i] ? Object.keys(m.votes[i]).length : 0;
+      const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+      const optEl = document.createElement('div');
+      optEl.className = 'pollOption' + (myVote === i ? ' voted' : '');
+      optEl.innerHTML =
+        '<div class="pollBar" style="width:' + pct + '%"></div>' +
+        '<div class="pollLabel"><span>' + (myVote === i ? '✅ ' : '') + escapeHtml(opt) + '</span>' +
+        '<span class="pollPct">' + pct + '% (' + count + ')</span></div>';
+      if (myVote === -1) {
+        optEl.addEventListener('click', () => votePoll(card.dataset.pollKey, m, i));
+      }
+      card.appendChild(optEl);
+    });
+
+    const totalEl = document.createElement('div');
+    totalEl.className = 'pollTotal';
+    totalEl.textContent = total + ' lượt bình chọn';
+    card.appendChild(totalEl);
+  }
+
+  function updatePollCardVotes(pollKey, m) {
+    const card = messagesDiv.querySelector('.pollCard[data-poll-key="' + pollKey + '"]');
+    if (card) fillPollCard(card, m);
+  }
+
+  function renderMessage(m){
+    if(m.type === 'system'){
+      const div = document.createElement('div');
+      div.className = 'msg system';
+      div.textContent = m.text;
+      messagesDiv.appendChild(div);
+      return;
+    }
+
+    if(m.type === 'poll'){
+      renderPollMessage(m);
+      return;
+    }
+
+    const isMine = m.sender === myName;
+    // Nhận diện bot: cờ fromBot, hoặc tên chứa "Bot Nối Từ"
+    const isBot = !!(m.fromBot) || m.sender === BOT_NAME ||
+      (typeof m.sender === 'string' && m.sender.indexOf('Bot Nối Từ') !== -1);
+    const row = document.createElement('div');
+    row.className = 'msgRow ' + (isMine ? 'mine' : (isBot ? 'bot' : 'theirs'));
+
+    const av = document.createElement('img');
+    av.className = 'msgAvatar';
+    av.alt = 'avt';
+    if (isBot) {
+      av.src = m.avatar || BOT_AVATAR || DEFAULT_BOT_AVATAR;
+      av.classList.add('botAvatar');
+      av.title = 'Bấm để ủng hộ xu cho bot';
+      av.addEventListener('click', (e) => {
+        e.stopPropagation();
+        donateToBot();
+      });
+    } else if (m.avatar) {
+      av.src = m.avatar;
+    } else if (isMine && myAvatar) {
+      av.src = myAvatar;
+    } else {
+      av.src = defaultAvatarUrl(m.sender || 'user');
+    }
+    av.onerror = function(){
+      this.src = isBot ? DEFAULT_BOT_AVATAR : defaultAvatarUrl(m.sender || 'user');
+    };
+
+    const div = document.createElement('div');
+    div.className = 'msg ' + (isMine ? 'mine' : (isBot ? 'bot' : 'theirs'));
+    div.innerHTML =
+      '<div class="name">' + escapeHtml(m.sender) + '</div>' +
+      '<div class="text">' + escapeHtml(m.text).replace(/\n/g, '<br>') + '</div>' +
+      '<div class="time">' + formatTime(m.time) + '</div>';
+
+    // Ép khung neon cho bot (kể cả tin gửi từ admin)
+    if (isBot) {
+      div.style.borderColor = 'var(--neon)';
+      div.style.background = 'linear-gradient(135deg, rgba(0,229,255,0.14), rgba(124,77,255,0.22))';
+      div.style.boxShadow = '0 0 12px rgba(0,229,255,0.35), 0 0 28px rgba(124,77,255,0.18), inset 0 0 20px rgba(0,229,255,0.06)';
+      const nameEl = div.querySelector('.name');
+      if (nameEl) {
+        nameEl.style.color = 'var(--neon)';
+        nameEl.style.textShadow = '0 0 8px rgba(0,229,255,0.55)';
+      }
+      av.style.borderColor = 'var(--neon)';
+      av.style.boxShadow = '0 0 10px rgba(0,229,255,0.45)';
+    }
+
+    const col = m.chatColor || (isMine ? myChatColor : '');
+    if (col && !isBot) {
+      div.style.borderColor = col;
+      div.style.background = isMine
+        ? `linear-gradient(135deg, ${hexToRgba(col,0.22)}, ${hexToRgba(col,0.12)})`
+        : `linear-gradient(135deg, ${hexToRgba(col,0.18)}, var(--panel2))`;
+      const nameEl = div.querySelector('.name');
+      if (nameEl) nameEl.style.color = col;
+    }
+
+    // Hiệu ứng tin nhắn (mua từ cửa hàng)
+    if (m.fx && !isBot) {
+      div.classList.add('fx-' + m.fx);
+    }
+
+    row.appendChild(av);
+    row.appendChild(div);
+    messagesDiv.appendChild(row);
+  }
+
+  function hexToRgba(hex, a){
+    if (!hex) return 'rgba(0,229,255,'+a+')';
+    let h = hex.replace('#','');
+    if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+    const r = parseInt(h.slice(0,2),16)||0;
+    const g = parseInt(h.slice(2,4),16)||0;
+    const b = parseInt(h.slice(4,6),16)||0;
+    return `rgba(${r},${g},${b},${a})`;
+  }
+
+  function scrollToBottom(){
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }
+
+  // ========== CHỐNG SPAM ==========
+  let lastSendAt = 0;
+  let lastSendText = '';
+  const SPAM_COOLDOWN_MS = 1000;      // tối thiểu 1s giữa 2 tin
+  const SPAM_SAME_COOLDOWN_MS = 5000; // tin trùng phải cách 5s
+  let spamWarnAt = 0;
+
+  // Chỉ hiện với chính người spam (không đẩy lên chat chung)
+  function showSpamWarn(msg) {
+    const now = Date.now();
+    if (now - spamWarnAt < 1000) return;
+    spamWarnAt = now;
+    const div = document.createElement('div');
+    div.className = 'msg system';
+    div.textContent = msg;
+    messagesDiv.appendChild(div);
+    scrollToBottom();
+    setTimeout(() => {
+      if (div.parentNode) div.parentNode.removeChild(div);
+    }, 2500);
+  }
+
+  function checkSpam(text) {
+    const now = Date.now();
+    const gap = now - lastSendAt;
+    if (gap < SPAM_COOLDOWN_MS) {
+      showSpamWarn('⏳ Gửi chậm thôi.');
+      return true;
+    }
+    if (text === lastSendText && gap < SPAM_SAME_COOLDOWN_MS) {
+      showSpamWarn('⏳ Gửi chậm thôi.');
+      return true;
+    }
+    return false;
+  }
+
+  function markSent(text) {
+    lastSendAt = Date.now();
+    lastSendText = text;
+  }
+
+  async function sendMessage(){
+    const text = msgInput.value.trim();
+    if(!text || !myName) return;
+
+    const lower = text.toLowerCase();
+
+    // Command /botnt — không hiện lệnh lên chat, chỉ bot ra từ
+    if (lower === '/botnt' || lower === '/botnt ') {
+      if (checkSpam(lower)) return;
+      msgInput.value = '';
+      markSent(lower);
+      startBotGame();
+      return;
+    }
+
+    // Command /botvtv — xáo trộn chữ cái
+    if (lower === '/botvtv' || lower === '/botvtv ') {
+      if (checkSpam(lower)) return;
+      msgInput.value = '';
+      markSent(lower);
+      startScrambleGame();
+      return;
+    }
+
+    // Command /bott — bài toán nhanh (cộng/trừ/nhân)
+    if (lower === '/bott' || lower === '/bott ') {
+      if (checkSpam(lower)) return;
+      msgInput.value = '';
+      markSent(lower);
+      startMathGame();
+      return;
+    }
+
+    // Thử trả lời challenge đang mở (ai cũng được)
+    // Cho phép trả lời game bỏ qua cooldown tin thường (vẫn chặn spam cực nhanh)
+    if (currentChallenge && !currentChallenge.solved) {
+      const now = Date.now();
+      if (now - lastSendAt < 600) {
+        showSpamWarn('⏳ Gửi chậm thôi.');
+        return;
+      }
+      const result = await tryClaimAnswer(text);
+      if (result && result.correct) {
+        markSent(text);
+        const userPayload = {
+          type: 'chat',
+          sender: myName,
+          text: text,
+          time: Date.now()
+        };
+        if (myChatColor) userPayload.chatColor = myChatColor;
+        if (myAvatar) userPayload.avatar = myAvatar;
+        await messagesRef.push(userPayload);
+
+        const cmd = result.type === 'scramble' ? '/botvtv' : '/botnt';
+        await messagesRef.push({
+          type: 'chat',
+          sender: BOT_NAME,
+          text: `✅ ${myName} đã trả lời đúng!\n「${result.word}」\n+${result.reward} xu.`,
+          time: Date.now() + 1,
+          avatar: BOT_AVATAR,
+          fromBot: true
+        });
+        msgInput.value = '';
+        pruneOldMessages();
+        return;
+      }
+    }
+
+    // Tin thường — áp chống spam đầy đủ
+    if (checkSpam(text)) return;
+
+    // Normal message
+    const payload = {
+      type: 'chat',
+      sender: myName,
+      text: text,
+      time: Date.now()
+    };
+    if (myChatColor) payload.chatColor = myChatColor;
+    if (myAvatar) payload.avatar = myAvatar;
+    if (myMsgEffect) payload.fx = myMsgEffect;
+    messagesRef.push(payload);
+    markSent(text);
+    msgInput.value = '';
+    pruneOldMessages();
+  }
+
+
+  // ========== SHOP ==========
+  let promptResolver = null;
+
+  
+  function compressImageToDataUrl(file, maxSize, quality){
+    maxSize = maxSize || 192;
+    quality = quality || 0.72;
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('Không đọc được file'));
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          let w = img.width, h = img.height;
+          if (w > maxSize || h > maxSize) {
+            if (w >= h) { h = Math.round(h * maxSize / w); w = maxSize; }
+            else { w = Math.round(w * maxSize / h); h = maxSize; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          try {
+            resolve(canvas.toDataURL('image/jpeg', quality));
+          } catch (e) {
+            reject(e);
+          }
+        };
+        img.onerror = () => reject(new Error('Ảnh không hợp lệ'));
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function setupShop(){
+    const badge = document.getElementById('xuDisplay');
+    badge.style.cursor = 'pointer';
+    badge.title = 'Mở cửa hàng';
+    badge.onclick = openShop;
+    document.getElementById('shopCloseBtn').onclick = closeShop;
+    document.getElementById('shopOverlay').onclick = (e) => {
+      if (e.target.id === 'shopOverlay') closeShop();
+    };
+    document.querySelectorAll('.buyBtn').forEach(btn => {
+      btn.onclick = () => buyItem(btn.dataset.item, parseInt(btn.dataset.price, 10));
+    });
+    document.querySelectorAll('.useBtn').forEach(btn => {
+      btn.onclick = () => useItem(btn.dataset.use);
+    });
+    document.querySelectorAll('.effectChip').forEach(chip => {
+      chip.onclick = () => selectMsgEffect(chip.dataset.fx);
+    });
+    document.getElementById('promptCancelBtn').onclick = () => finishPrompt(null);
+    document.getElementById('promptOkBtn').onclick = () => {
+      const textEl = document.getElementById('promptText');
+      const colorEl = document.getElementById('promptColor');
+      if (textEl.style.display !== 'none') finishPrompt(textEl.value.trim());
+      else finishPrompt(colorEl.value);
+    };
+  }
+
+  function openShop(){
+    refreshShopUI();
+    document.getElementById('shopOverlay').classList.add('open');
+    document.getElementById('shopMsg').textContent = '';
+  }
+  function closeShop(){
+    document.getElementById('shopOverlay').classList.remove('open');
+  }
+  function refreshShopUI(){
+    document.getElementById('shopXu').textContent = myXu;
+    document.getElementById('invRename').textContent = myInv.rename || 0;
+    document.getElementById('invAvatar').textContent = myInv.avatar || 0;
+    document.getElementById('invColor').textContent = myInv.color || 0;
+    document.getElementById('invFxGlow').textContent = myInv.fx_glow || 0;
+    document.getElementById('invFxRainbow').textContent = myInv.fx_rainbow || 0;
+    document.getElementById('invFxShake').textContent = myInv.fx_shake || 0;
+    document.getElementById('invFxSparkle').textContent = myInv.fx_sparkle || 0;
+    document.getElementById('curFxLabel').textContent = myMsgEffect ? (FX_LABELS[myMsgEffect] || myMsgEffect) : 'Không có';
+    document.querySelectorAll('.effectChip').forEach(chip => {
+      chip.classList.toggle('active', chip.dataset.fx === myMsgEffect);
+    });
+    updateXuDisplay();
+  }
+  const FX_ITEM_KEY = { glow: 'fx_glow', rainbow: 'fx_rainbow', shake: 'fx_shake', sparkle: 'fx_sparkle' };
+  async function selectMsgEffect(fx){
+    if (!myName) return;
+    if (fx && (myInv[FX_ITEM_KEY[fx]] || 0) < 1) {
+      shopMsg('Bạn chưa mua hiệu ứng này. Hãy mua trước!', false);
+      return;
+    }
+    myMsgEffect = fx || '';
+    try {
+      await saveUserProfile({ msgEffect: myMsgEffect });
+      refreshShopUI();
+      shopMsg(fx ? 'Đã bật hiệu ứng: ' + (FX_LABELS[fx] || fx) : 'Đã tắt hiệu ứng tin nhắn.', true);
+    } catch (e) {
+      shopMsg('Lỗi: ' + e.message, false);
+    }
+  }
+  function shopMsg(text, ok){
+    const el = document.getElementById('shopMsg');
+    el.className = 'shopMsg ' + (ok ? 'ok' : 'err');
+    el.textContent = text;
+  }
+
+  async function saveUserProfile(extra){
+    if (!myName) return;
+    const key = toKey(myName);
+    const data = Object.assign({
+      xu: myXu,
+      inv: myInv,
+      avatar: myAvatar || null,
+      chatColor: myChatColor || null,
+      msgEffect: myMsgEffect || null
+    }, extra || {});
+    // if renaming, handled separately
+    await usersRef.child(key).update(data);
+  }
+
+  async function buyItem(item, price){
+    if (!myName) return;
+    if (myXu < price) {
+      shopMsg('Không đủ xu! Cần ' + price + ' xu.', false);
+      return;
+    }
+    myXu -= price;
+    myInv[item] = (myInv[item] || 0) + 1;
+    try {
+      await saveUserProfile();
+      refreshShopUI();
+      shopMsg(item === 'effect' ? 'Đã mua! Chọn hiệu ứng bên dưới để dùng.' : 'Đã mua thành công! Kiểm tra Túi đồ.', true);
+    } catch (e) {
+      myXu += price;
+      myInv[item] -= 1;
+      shopMsg('Lỗi: ' + e.message, false);
+    }
+  }
+
+  function askPrompt(title, mode){
+    // mode: 'text' | 'color'
+    return new Promise(resolve => {
+      promptResolver = resolve;
+      document.getElementById('promptTitle').textContent = title;
+      const t = document.getElementById('promptText');
+      const col = document.getElementById('promptColor');
+      if (mode === 'color') {
+        t.style.display = 'none';
+        col.style.display = 'block';
+        col.value = myChatColor || '#00e5ff';
+      } else {
+        col.style.display = 'none';
+        t.style.display = 'block';
+        t.value = '';
+        t.placeholder = title;
+      }
+      document.getElementById('promptOverlay').classList.add('open');
+      setTimeout(() => { if (mode !== 'color') t.focus(); }, 50);
+    });
+  }
+  function finishPrompt(val){
+    document.getElementById('promptOverlay').classList.remove('open');
+    const r = promptResolver;
+    promptResolver = null;
+    if (r) r(val);
+  }
+
+  async function useItem(item){
+    if (!myInv[item] || myInv[item] < 1) {
+      shopMsg('Bạn chưa có thẻ này. Hãy mua trước!', false);
+      return;
+    }
+    if (item === 'rename') {
+      const name = await askPrompt('Nhập tên mới (2–20 ký tự)', 'text');
+      if (!name) return;
+      if (name.length < 2 || name.length > 20) {
+        shopMsg('Tên phải từ 2–20 ký tự', false);
+        return;
+      }
+      const newKey = toKey(name);
+      const oldKey = toKey(myName);
+      if (newKey !== oldKey) {
+        const exists = await usersRef.child(newKey).get();
+        if (exists.exists()) {
+          shopMsg('Tên này đã có người dùng', false);
+          return;
+        }
+      }
+      try {
+        // copy user data under new key if key changed
+        const snap = await usersRef.child(oldKey).get();
+        const data = snap.val() || {};
+        myInv.rename -= 1;
+        data.displayName = name;
+        data.inv = myInv;
+        data.xu = myXu;
+        data.avatar = myAvatar || null;
+        data.chatColor = myChatColor || null;
+        if (newKey !== oldKey) {
+          await usersRef.child(newKey).set(data);
+          await usersRef.child(oldKey).remove();
+        } else {
+          await usersRef.child(oldKey).update(data);
+        }
+        myName = name;
+        updateBotntQuickBtn();
+        localStorage.setItem(LS_KEY, name);
+        document.getElementById('headerName').textContent = myName;
+        if (!myAvatar) applyHeaderAvatar();
+        refreshShopUI();
+        shopMsg('Đã đổi tên thành 「' + name + '」', true);
+      } catch (e) {
+        myInv.rename += 1;
+        shopMsg('Lỗi đổi tên: ' + e.message, false);
+      }
+      return;
+    }
+
+    if (item === 'avatar') {
+      // Chọn ảnh từ thư viện máy
+      const fileInput = document.getElementById('avatarFileInput');
+      fileInput.value = '';
+      const file = await new Promise(resolve => {
+        fileInput.onchange = () => resolve(fileInput.files && fileInput.files[0] ? fileInput.files[0] : null);
+        fileInput.click();
+      });
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        shopMsg('Vui lòng chọn file ảnh', false);
+        return;
+      }
+      if (file.size > 8 * 1024 * 1024) {
+        shopMsg('Ảnh quá lớn (tối đa 8MB)', false);
+        return;
+      }
+      try {
+        shopMsg('Đang xử lý ảnh...', true);
+        const dataUrl = await compressImageToDataUrl(file, 192, 0.72);
+        myInv.avatar -= 1;
+        myAvatar = dataUrl;
+        await saveUserProfile();
+        applyHeaderAvatar();
+        refreshShopUI();
+        shopMsg('Đã đổi avatar từ ảnh của bạn!', true);
+      } catch (e) {
+        console.error(e);
+        shopMsg('Lỗi xử lý ảnh: ' + (e.message || e), false);
+      }
+      return;
+    }
+
+    if (item === 'color') {
+      const col = await askPrompt('Chọn màu chat của bạn', 'color');
+      if (!col) return;
+      try {
+        myInv.color -= 1;
+        myChatColor = col;
+        await saveUserProfile();
+        refreshShopUI();
+        shopMsg('Đã đổi màu chat! Tin nhắn mới sẽ dùng màu này.', true);
+      } catch (e) {
+        myInv.color += 1;
+        shopMsg('Lỗi: ' + e.message, false);
+      }
+    }
+  }
+
+
+    // Events
+  const loginForm = document.getElementById('loginForm');
+  loginForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    login();
+  });
+  registerBtn.addEventListener('click', register);
+  logoutBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.getElementById('avatarMenu').classList.remove('open');
+    logout();
+  });
+  sendBtn.addEventListener('click', sendMessage);
+
+  function updateBotntQuickBtn(){
+    botntQuickBtn.style.display = (myName === 'hungw') ? 'flex' : 'none';
+    const resetBtn = document.getElementById('resetPassBtn');
+    if (resetBtn) resetBtn.style.display = (myName === 'hungw') ? 'block' : 'none';
+  }
+
+  document.getElementById('resetPassBtn').addEventListener('click', async (e) => {
+    e.stopPropagation();
+    document.getElementById('avatarMenu').classList.remove('open');
+    await resetUserPassword();
+  });
+
+  // Admin đặt lại mật khẩu cho người dùng bị quên (chỉ hungw thấy nút này)
+  async function resetUserPassword(){
+    if (myName !== 'hungw') return;
+    const targetName = await askPrompt('Nhập tên tài khoản cần reset mật khẩu', 'text');
+    if (!targetName) return;
+    const key = toKey(targetName.trim());
+    try {
+      const snap = await usersRef.child(key).get();
+      if (!snap.exists()) {
+        alert('Không tìm thấy tài khoản 「' + targetName + '」');
+        return;
+      }
+      const newPass = await askPrompt('Nhập mật khẩu mới cho 「' + snap.val().displayName + '」', 'text');
+      if (!newPass || newPass.length < 3) {
+        alert('Mật khẩu phải từ 3 ký tự trở lên');
+        return;
+      }
+      const hashed = await hashPassword(newPass, key);
+      await usersRef.child(key).update({ password: hashed });
+      alert('Đã đặt lại mật khẩu cho 「' + snap.val().displayName + '」 thành công!');
+    } catch (e) {
+      alert('Lỗi: ' + e.message);
+    }
+  }
+
+  botntQuickBtn.addEventListener('click', () => {
+    if (!myName) return;
+    if (checkSpam('/botnt')) return;
+    markSent('/botnt');
+    startBotGame();
+  });
+  msgInput.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter') sendMessage();
+  });
+
+  // Bấm avatar → hiện/ẩn nút Đăng xuất
+  const headerAvatar = document.getElementById('headerAvatar');
+  const avatarMenu = document.getElementById('avatarMenu');
+  headerAvatar.addEventListener('click', (e) => {
+    e.stopPropagation();
+    avatarMenu.classList.toggle('open');
+  });
+  document.addEventListener('click', () => {
+    avatarMenu.classList.remove('open');
+  });
+  avatarMenu.addEventListener('click', (e) => e.stopPropagation());
+
+  // Auto login
+  window.addEventListener('DOMContentLoaded', async () => {
+    const saved = localStorage.getItem(LS_KEY);
+    if(saved){
+      const key = toKey(saved);
+      try{
+        const snap = await usersRef.child(key).get();
+        if(snap.exists()){
+          const data = snap.val();
+          myName = data.displayName;
+          updateBotntQuickBtn();
+          myXu = data.xu || 0;
+          myAvatar = data.avatar || '';
+          myChatColor = data.chatColor || '';
+          myInv = {
+            rename: (data.inv && data.inv.rename) || 0,
+            avatar: (data.inv && data.inv.avatar) || 0,
+            color: (data.inv && data.inv.color) || 0,
+            fx_glow: (data.inv && data.inv.fx_glow) || 0,
+            fx_rainbow: (data.inv && data.inv.fx_rainbow) || 0,
+            fx_shake: (data.inv && data.inv.fx_shake) || 0,
+            fx_sparkle: (data.inv && data.inv.fx_sparkle) || 0
+          };
+          myMsgEffect = data.msgEffect || '';
+          enterChat();
+        } else {
+          localStorage.removeItem(LS_KEY);
+        }
+      }catch(e){
+        console.error(e);
+      }
+    }
+  });
+</script>
+</body>
+</html>
