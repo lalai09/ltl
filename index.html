@@ -516,6 +516,14 @@
     transition:0.15s;
   }
   #friendsBtn:hover{ border-color:var(--neon2); box-shadow:0 0 0 2px rgba(124,77,255,0.2); }
+  #worldBtn{
+    width:34px; height:34px; border-radius:50%;
+    background:var(--panel2); border:1px solid var(--border);
+    color:var(--text); font-size:16px;
+    display:flex; align-items:center; justify-content:center;
+    transition:0.15s; margin-right:6px;
+  }
+  #worldBtn:hover{ border-color:var(--neon2); box-shadow:0 0 0 2px rgba(124,77,255,0.2); }
   .friendReqBadge{
     display:none; position:absolute; top:-4px; right:-4px;
     min-width:16px; height:16px; padding:0 3px; border-radius:8px;
@@ -687,6 +695,7 @@
     <div class="userInfo">
       <span class="botBudgeBadge" id="botBudgeDisplay" title="Xu thưởng bot còn lại hôm nay">🤖 100/100</span>
       <span class="xuBadge" id="xuDisplay">💰 0 xu</span>
+      <button type="button" id="worldBtn" title="Thế giới mở 2D">🌍</button>
       <div class="friendsBtnWrap">
         <button type="button" id="friendsBtn" title="Bạn bè">👥</button>
         <span class="friendReqBadge" id="friendReqBadge">0</span>
@@ -927,6 +936,7 @@
   const logoutBtn = document.getElementById('logoutBtn');
   const xuDisplay = document.getElementById('xuDisplay');
   const friendsBtn = document.getElementById('friendsBtn');
+  const worldBtn = document.getElementById('worldBtn');
   const friendReqBadge = document.getElementById('friendReqBadge');
   const friendsOverlay = document.getElementById('friendsOverlay');
   const friendsListWrap = document.getElementById('friendsListWrap');
@@ -2825,6 +2835,10 @@
     if (!myName) return;
     loadAllUsersCache(true);
     openFriendsOverlay();
+  });
+  worldBtn.addEventListener('click', () => {
+    if (!myName) return;
+    window.location.href = 'world2d.html';
   });
   document.getElementById('friendsCloseBtn').addEventListener('click', closeFriendsOverlay);
   document.querySelectorAll('.friendsTab').forEach(t => {
