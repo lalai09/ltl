@@ -240,12 +240,62 @@
 
   
   .msgRow{
-    display:flex; align-items:flex-end; gap:8px;
+    display:flex;
     max-width:85%;
     animation:fadeIn 0.2s ease;
+    position:relative;
+    touch-action:pan-y;
   }
-  .msgRow.mine{ align-self:flex-end; flex-direction:row-reverse; }
+  .msgRow.mine{ align-self:flex-end; }
   .msgRow.theirs, .msgRow.bot{ align-self:flex-start; }
+  .msgContent{
+    display:flex; align-items:flex-end; gap:8px;
+    max-width:100%;
+    transition:transform 0.2s ease;
+  }
+  .msgRow.mine .msgContent{ flex-direction:row-reverse; }
+  .msgRow.dragging .msgContent{ transition:none; }
+
+  #swipeReplyIcon{
+    display:none; position:fixed; z-index:60;
+    width:30px; height:30px; border-radius:50%;
+    background:var(--panel2); border:1px solid var(--neon2);
+    align-items:center; justify-content:center; font-size:15px;
+    box-shadow:0 0 10px rgba(124,77,255,0.4);
+    pointer-events:none; opacity:0; transition:opacity .1s;
+  }
+
+  .msg .replyQuote{
+    display:flex; flex-direction:column; gap:1px;
+    padding:5px 8px; margin-bottom:5px;
+    background:rgba(255,255,255,0.06); border-left:3px solid var(--neon2);
+    border-radius:6px; font-size:11.5px; cursor:default;
+  }
+  .msg .replyQuote .rqName{ font-weight:700; color:var(--neon2); }
+  .msg .replyQuote .rqText{
+    color:var(--muted); white-space:nowrap; overflow:hidden;
+    text-overflow:ellipsis; max-width:220px;
+  }
+
+  #replyPreviewBar{
+    display:none; align-items:center; gap:10px;
+    padding:8px 16px; background:var(--panel2); border-top:1px solid var(--border);
+    flex-shrink:0;
+  }
+  #replyPreviewBar.show{ display:flex; }
+  .replyPreviewContent{ flex:1; display:flex; gap:8px; align-items:center; min-width:0; }
+  .replyPreviewLine{ width:3px; align-self:stretch; background:var(--neon2); border-radius:2px; flex-shrink:0; }
+  .replyPreviewText{ min-width:0; }
+  .replyPreviewName{ font-size:12px; font-weight:700; color:var(--neon2); }
+  .replyPreviewMsg{
+    font-size:12.5px; color:var(--muted); white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis; max-width:260px;
+  }
+  #replyPreviewCancel{
+    background:transparent; border:none; color:var(--muted);
+    font-size:16px; cursor:pointer; flex-shrink:0; padding:4px;
+  }
+  #replyPreviewCancel:hover{ color:var(--danger); }
   .msgAvatar{
     width:32px; height:32px; border-radius:50%;
     object-fit:cover; flex-shrink:0;
@@ -636,6 +686,17 @@
   </header>
 
   <div id="messages"></div>
+
+  <div id="replyPreviewBar">
+    <div class="replyPreviewContent">
+      <div class="replyPreviewLine"></div>
+      <div class="replyPreviewText">
+        <div class="replyPreviewName" id="replyPreviewName"></div>
+        <div class="replyPreviewMsg" id="replyPreviewMsg"></div>
+      </div>
+    </div>
+    <button type="button" id="replyPreviewCancel" title="Huỷ trả lời">✕</button>
+  </div>
 
   <div id="inputBar">
     <input type="text" id="msgInput" placeholder="Nhập tin nhắn..." maxlength="500" autocomplete="off">
@@ -1809,6 +1870,8 @@
     stopFriendsData();
     closePrivateChat();
     closeFriendsOverlay();
+    cancelReply();
+    Object.keys(msgStore).forEach(k => delete msgStore[k]);
     messagesDiv.innerHTML = '';
     chatScreen.style.display = 'none';
     loginScreen.style.display = 'flex';
@@ -1836,6 +1899,7 @@
 
   function listenMessages(){
     messagesDiv.innerHTML = '';
+    Object.keys(msgStore).forEach(k => delete msgStore[k]);
     messagesRef.limitToLast(100).on('child_added', (snap) => {
       const m = snap.val();
       const wasNearBottom = isNearBottom();
@@ -1959,7 +2023,7 @@
     if (card) fillPollCard(card, m);
   }
 
-  function renderMessage(m){
+  function renderMessage(m, key){
     if(m.type === 'system'){
       const div = document.createElement('div');
       div.className = 'msg system';
@@ -1969,7 +2033,7 @@
     }
 
     if(m.type === 'poll'){
-      renderPollMessage(m);
+      renderPollMessage(m, key);
       return;
     }
 
@@ -1979,6 +2043,13 @@
       (typeof m.sender === 'string' && m.sender.indexOf('Bot Nối Từ') !== -1);
     const row = document.createElement('div');
     row.className = 'msgRow ' + (isMine ? 'mine' : (isBot ? 'bot' : 'theirs'));
+    if (key) {
+      row.dataset.msgKey = key;
+      msgStore[key] = m;
+    }
+
+    const content = document.createElement('div');
+    content.className = 'msgContent';
 
     const av = document.createElement('img');
     av.className = 'msgAvatar';
@@ -2004,8 +2075,13 @@
 
     const div = document.createElement('div');
     div.className = 'msg ' + (isMine ? 'mine' : (isBot ? 'bot' : 'theirs'));
+    const replyHtml = m.replyTo
+      ? '<div class="replyQuote"><div class="rqName">' + escapeHtml(m.replyTo.sender || '') + '</div>' +
+        '<div class="rqText">' + escapeHtml(m.replyTo.text || '') + '</div></div>'
+      : '';
     div.innerHTML =
       '<div class="name">' + escapeHtml(m.sender) + '</div>' +
+      replyHtml +
       '<div class="text">' + escapeHtml(m.text).replace(/\n/g, '<br>') + '</div>' +
       '<div class="time">' + formatTime(m.time) + '</div>';
 
@@ -2038,8 +2114,9 @@
       div.classList.add('fx-' + m.fx);
     }
 
-    row.appendChild(av);
-    row.appendChild(div);
+    content.appendChild(av);
+    content.appendChild(div);
+    row.appendChild(content);
     messagesDiv.appendChild(row);
   }
 
@@ -2056,6 +2133,110 @@
   function scrollToBottom(){
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
   }
+
+  // ========== VUỐT TIN NHẮN ĐỂ TRẢ LỜI (SWIPE TO REPLY) ==========
+  const msgStore = {};      // key -> message data (để lấy nội dung khi trả lời)
+  let replyingTo = null;    // { key, sender, text }
+  let swipeState = null;    // trạng thái đang vuốt
+  const SWIPE_THRESHOLD = 55;
+  const SWIPE_MAX = 80;
+
+  const swipeReplyIcon = document.createElement('div');
+  swipeReplyIcon.id = 'swipeReplyIcon';
+  swipeReplyIcon.textContent = '↩️';
+  document.body.appendChild(swipeReplyIcon);
+
+  function getReplyPreviewText(m){
+    if (!m) return '';
+    if (m.type === 'poll') return '🗳️ ' + (m.question || '');
+    return (m.text || '').slice(0, 80);
+  }
+
+  function replySenderLabel(m){
+    if (!m) return '';
+    const isBot = !!(m.fromBot) || m.sender === BOT_NAME ||
+      (typeof m.sender === 'string' && m.sender.indexOf('Bot Nối Từ') !== -1);
+    return isBot ? BOT_NAME : (m.sender || m.createdBy || '');
+  }
+
+  function startReply(key, m){
+    replyingTo = { key: key, sender: replySenderLabel(m), text: getReplyPreviewText(m) };
+    document.getElementById('replyPreviewName').textContent = replyingTo.sender;
+    document.getElementById('replyPreviewMsg').textContent = replyingTo.text;
+    document.getElementById('replyPreviewBar').classList.add('show');
+    msgInput.focus();
+  }
+
+  function cancelReply(){
+    replyingTo = null;
+    document.getElementById('replyPreviewBar').classList.remove('show');
+  }
+
+  const replyPreviewCancelBtn = document.getElementById('replyPreviewCancel');
+  if (replyPreviewCancelBtn) replyPreviewCancelBtn.addEventListener('click', cancelReply);
+
+  function resetSwipeVisual(st){
+    if (!st) return;
+    st.row.classList.remove('dragging');
+    st.content.style.transform = '';
+    swipeReplyIcon.style.display = 'none';
+    swipeReplyIcon.style.opacity = '0';
+  }
+
+  messagesDiv.addEventListener('pointerdown', (e) => {
+    if (e.button !== undefined && e.button !== 0) return;
+    const row = e.target.closest('.msgRow');
+    if (!row || !messagesDiv.contains(row)) return;
+    const content = row.querySelector('.msgContent');
+    const key = row.dataset.msgKey;
+    if (!content || !key) return; // tin hệ thống / poll không vuốt được
+    swipeState = {
+      row: row, content: content, key: key,
+      startX: e.clientX, startY: e.clientY,
+      dx: 0, dragging: false, pointerId: e.pointerId
+    };
+  });
+
+  document.addEventListener('pointermove', (e) => {
+    if (!swipeState || swipeState.pointerId !== e.pointerId) return;
+    const dx = e.clientX - swipeState.startX;
+    const dy = e.clientY - swipeState.startY;
+    if (!swipeState.dragging) {
+      if (Math.abs(dx) < 8) return;
+      if (Math.abs(dy) > Math.abs(dx)) { swipeState = null; return; } // cuộn dọc, không phải vuốt
+      swipeState.dragging = true;
+      swipeState.row.classList.add('dragging');
+    }
+    if (dx >= 0) {
+      swipeState.dx = 0;
+      swipeState.content.style.transform = '';
+      swipeReplyIcon.style.display = 'none';
+      swipeReplyIcon.style.opacity = '0';
+    } else {
+      swipeState.dx = Math.max(dx, -SWIPE_MAX);
+      swipeState.content.style.transform = 'translateX(' + swipeState.dx + 'px)';
+      const progress = Math.min(1, Math.abs(swipeState.dx) / SWIPE_THRESHOLD);
+      const rect = swipeState.row.getBoundingClientRect();
+      swipeReplyIcon.style.display = 'flex';
+      swipeReplyIcon.style.opacity = String(progress);
+      swipeReplyIcon.style.left = Math.max(4, rect.left - 36) + 'px';
+      swipeReplyIcon.style.top = (rect.top + rect.height / 2 - 15) + 'px';
+    }
+    if (swipeState.dragging) e.preventDefault();
+  }, { passive: false });
+
+  function endSwipe(e){
+    if (!swipeState || (e && swipeState.pointerId !== e.pointerId)) return;
+    const st = swipeState;
+    swipeState = null;
+    resetSwipeVisual(st);
+    if (st.dragging && Math.abs(st.dx) >= SWIPE_THRESHOLD) {
+      const m = msgStore[st.key];
+      if (m) startReply(st.key, m);
+    }
+  }
+  document.addEventListener('pointerup', endSwipe);
+  document.addEventListener('pointercancel', endSwipe);
 
   // ========== CHỐNG SPAM ==========
   let lastSendAt = 0;
@@ -2222,6 +2403,10 @@
     if (myChatColor) payload.chatColor = myChatColor;
     if (myAvatar) payload.avatar = myAvatar;
     if (myMsgEffect) payload.fx = myMsgEffect;
+    if (replyingTo) {
+      payload.replyTo = { sender: replyingTo.sender, text: replyingTo.text };
+      cancelReply();
+    }
     messagesRef.push(payload);
     markSent(text);
     msgInput.value = '';
