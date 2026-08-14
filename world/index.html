@@ -1312,7 +1312,7 @@ if (backBtn) {
   backBtn.addEventListener('click', (e) => {
     e.preventDefault();
     saveProgress();
-    window.location.href = '/';
+    window.location.href = '/ltl';
   });
 }
 
@@ -1321,14 +1321,14 @@ if (backBtn) {
   (async function initFromChatAccount() {
     const savedName = localStorage.getItem(CHAT_LS_KEY);
     if (!savedName) {
-      window.location.href = '/';
+      window.location.href = '/ltl';
       return;
     }
     const key = toKey(savedName);
     try {
       const snap = await db.ref('chat_users').child(key).get();
       if (!snap.exists()) {
-        window.location.href = '/';
+        window.location.href = '/ltl';
         return;
       }
       const data = snap.val();
@@ -1340,7 +1340,7 @@ if (backBtn) {
       initMultiplayer();
     } catch (e) {
       console.error(e);
-      window.location.href = '/';
+      window.location.href = '/ltl';
     }
   })();
 
