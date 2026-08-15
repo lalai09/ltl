@@ -454,7 +454,7 @@
     axe:   { icon:'🪓', name:'Rìu' },
     pickaxe:{icon:'⛏️', name:'Cuốc' },
     rod:   { icon:'🎣', name:'Cần câu' },
-    seed_rice:   { icon:'🌾', name:'Hạt giống lúa' },
+    seed_rice:   { icon:'🌱', name:'Hạt giống lúa' },
     seed_corn:   { icon:'🌽', name:'Hạt giống ngô' },
     seed_potato: { icon:'🥔', name:'Hạt giống khoai' }
   };
@@ -503,7 +503,7 @@
 
   // Hạt giống: vật phẩm tiêu hao, mua bao nhiêu lần cũng được, cộng dồn vào túi đồ
   const seedOffers = [
-    { id:'seed_rice',   name:'Hạt giống lúa', icon:'🌾', price:3 },
+    { id:'seed_rice',   name:'Hạt giống lúa', icon:'🌱', price:3 },
     { id:'seed_corn',   name:'Hạt giống ngô', icon:'🌽', price:4 },
     { id:'seed_potato', name:'Hạt giống khoai', icon:'🥔', price:4 },
   ];
@@ -699,7 +699,7 @@
   // Mỗi tài khoản có trạng thái cây trồng RIÊNG (farmPlots lưu theo saveRef
   // của từng người, không chia sẻ với người chơi khác) — vị trí vật lý các ô
   // đất là chung, nhưng chỉ chủ tài khoản mới thấy/thu hoạch cây của mình.
-  const FARM_TX0 = 2, FARM_TY0 = 22, FARM_COLS = 4, FARM_ROWS = 3;
+  const FARM_TX0 = 2, FARM_TY0 = 20, FARM_COLS = 6, FARM_ROWS = 6;
   for (let ty = FARM_TY0-1; ty <= FARM_TY0+FARM_ROWS; ty++) {
     for (let tx = FARM_TX0-1; tx <= FARM_TX0+FARM_COLS; tx++) {
       if (tx>=0 && ty>=0 && tx<WORLD_COLS && ty<WORLD_ROWS) {
@@ -717,12 +717,7 @@
       }
     }
   })();
-  interactables.push({
-    x: (FARM_TX0 + FARM_COLS/2)*TILE, y: (FARM_TY0-1)*TILE + TILE/2,
-    r: 14, type:'sign', icon:'🌱', name:'Nông trại',
-    color:'#6b8e23',
-    msg:'🌱 Nông trại: đứng lên ô đất nâu rồi bấm Dùng để trồng hạt giống đang có, bấm lại khi cây chín để thu hoạch. Chỗ trồng này chỉ mình bạn thấy!'
-  });
+
 
   // ---------- NHÂN VẬT ----------
   const player = {
