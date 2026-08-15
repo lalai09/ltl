@@ -418,7 +418,7 @@
           resourceNodes.push({
             type:'wood', tx, ty,
             x: tx*TILE + TILE/2, y: ty*TILE + TILE/2,
-            hp:3, maxHp:3, alive:true, respawnAt:0
+            hp:15, maxHp:15, alive:true, respawnAt:0
           });
         }
       }
@@ -430,7 +430,7 @@
           resourceNodes.push({
             type:'stone', tx, ty,
             x: tx*TILE + TILE/2, y: ty*TILE + TILE/2,
-            hp:4, maxHp:4, alive:true, respawnAt:0
+            hp:12, maxHp:12, alive:true, respawnAt:0
           });
         }
       }
@@ -1054,7 +1054,14 @@
   function gatherNode(node) {
     const style = RESOURCE_STYLE[node.type];
     const usingRightTool = (node.type === 'wood' && equipped === 'axe') || (node.type === 'stone' && equipped === 'pickaxe');
-    const dmg = usingRightTool ? 2 : 1;
+    // Không dụng cụ: cây 5 lần (hp15/dmg3), đá 6 lần (hp12/dmg2)
+    // Có dụng cụ: cây 3 lần (dmg5), đá 4 lần (dmg3)
+    let dmg;
+    if (usingRightTool) {
+      dmg = node.type === 'wood' ? 5 : 3;
+    } else {
+      dmg = node.type === 'wood' ? 3 : 2;
+    }
     node.hp -= dmg;
     spawnChopFx(node.x, node.y);
     if (usingRightTool) wearTool(node.type === 'wood' ? 'axe' : 'pickaxe');
