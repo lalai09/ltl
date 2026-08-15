@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Worldhaha</title>
+<title>World</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   html,body {
@@ -711,6 +711,15 @@
       }
     }
   })();
+  // Xoá mọi tài nguyên (cây/đá) lỡ rơi trúng khu nông trại + vùng đệm quanh nó,
+  // vì spawnResourceNodes() đã chạy trước khi khu đất này được dọn.
+  for (let i = resourceNodes.length - 1; i >= 0; i--) {
+    const n = resourceNodes[i];
+    if (n.tx >= FARM_TX0-1 && n.tx < FARM_TX0+FARM_COLS+1 &&
+        n.ty >= FARM_TY0-1 && n.ty < FARM_TY0+FARM_ROWS+1) {
+      resourceNodes.splice(i, 1);
+    }
+  }
 
 
   // ---------- NHÂN VẬT ----------
