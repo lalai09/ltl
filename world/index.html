@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Worldhihi</title>
+<title>World</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   html,body {
@@ -452,7 +452,10 @@
     coin:  { icon:'💰', name:'Xu' },
     axe:   { icon:'🪓', name:'Rìu' },
     pickaxe:{icon:'⛏️', name:'Cuốc' },
-    rod:   { icon:'🎣', name:'Cần câu' }
+    rod:   { icon:'🎣', name:'Cần câu' },
+    seed_rice:   { icon:'🌾', name:'Hạt giống lúa' },
+    seed_corn:   { icon:'🌽', name:'Hạt giống ngô' },
+    seed_potato: { icon:'🥔', name:'Hạt giống khoai' }
   };
   function addItem(id, n) {
     inventory[id] = (inventory[id]||0) + n;
@@ -496,6 +499,13 @@
       cost:{coin:40}, durability:30, onCraft:()=>{ playerTools.rod = 30; addItem('rod',1); } },
   ];
   const playerTools = { axe:0, pickaxe:0, rod:0 }; // 0 = chưa có / đã hỏng; số còn lại = độ bền dùng được
+
+  // Hạt giống: vật phẩm tiêu hao, mua bao nhiêu lần cũng được, cộng dồn vào túi đồ
+  const seedOffers = [
+    { id:'seed_rice',   name:'Hạt giống lúa', icon:'🌾', price:3 },
+    { id:'seed_corn',   name:'Hạt giống ngô', icon:'🌽', price:4 },
+    { id:'seed_potato', name:'Hạt giống khoai', icon:'🥔', price:4 },
+  ];
 
   // ---------- HOTBAR (thanh ô đồ trang bị) ----------
   // Chỉ những công cụ cầm-tay mới vào hotbar; "equipped" là công cụ đang cầm
@@ -572,8 +582,22 @@
         </div>`;
     }).join('');
 
+    const seedHtml = seedOffers.map(sd => {
+      const owned = inventory[sd.id] || 0;
+      const can = (inventory.coin||0) >= sd.price;
+      return `
+        <div class="recipeCard">
+          <div class="recipeInfo">
+            <b>${sd.icon} ${sd.name}</b>${owned ? ` <span style="opacity:.7">(đang có: ${owned})</span>` : ''}
+            <div class="recipeCost">Giá: ${sd.price} 💰 / hạt</div>
+          </div>
+          <button class="recipeBtn" data-buyseed="${sd.id}" ${can ? '' : 'disabled'}>Mua</button>
+        </div>`;
+    }).join('');
+
     list.innerHTML = `<h4>💰 Bạn có: ${inventory.coin||0} Xu</h4>
       <h4>📦 Bán tài nguyên</h4>${sellHtml}
+      <h4>🌱 Mua hạt giống</h4>${seedHtml}
       <h4>🛒 Mua đồ</h4>${buyHtml}`;
 
     list.querySelectorAll('[data-sell]').forEach(btn => {
@@ -595,6 +619,16 @@
         payItems(r.cost);
         r.onCraft();
         showMessage(`Đã mua ${r.icon} ${r.name}!`);
+        renderShop();
+      });
+    });
+    list.querySelectorAll('[data-buyseed]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const sd = seedOffers.find(so => so.id === btn.dataset.buyseed);
+        if (!sd || (inventory.coin||0) < sd.price) return;
+        payItems({ coin: sd.price });
+        addItem(sd.id, 1);
+        showMessage(`Đã mua ${sd.icon} ${sd.name}!`, 1200);
         renderShop();
       });
     });
