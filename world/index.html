@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>World</title>
+<title>Worldhaha</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   html,body {
@@ -460,6 +460,7 @@
     inventory[id] = (inventory[id]||0) + n;
     renderInventory();
     if (typeof renderHotbar === 'function') renderHotbar();
+    if (typeof scheduleSave === 'function') scheduleSave();
   }
   function hasItems(cost) {
     return Object.entries(cost).every(([k,v]) => (inventory[k]||0) >= v);
@@ -467,6 +468,7 @@
   function payItems(cost) {
     Object.entries(cost).forEach(([k,v]) => { inventory[k] -= v; });
     renderInventory();
+    if (typeof scheduleSave === 'function') scheduleSave();
   }
   function renderInventory() {
     const bar = document.getElementById('invBar');
@@ -491,11 +493,11 @@
   ];
   const recipes = [
     { id:'axe', name:'Rìu gỗ', icon:'🪓', desc:'Chặt cây nhanh & mạnh hơn (độ bền 40)',
-      cost:{coin:20}, durability:40, onCraft:()=>{ playerTools.axe = 40; renderHotbar(); } },
+      cost:{coin:20}, durability:40, onCraft:()=>{ playerTools.axe = 40; renderHotbar(); if (typeof scheduleSave === 'function') scheduleSave(); } },
     { id:'pickaxe', name:'Cuốc gỗ', icon:'⛏️', desc:'Đào đá nhanh & mạnh hơn (độ bền 40)',
-      cost:{coin:20}, durability:40, onCraft:()=>{ playerTools.pickaxe = 40; renderHotbar(); } },
+      cost:{coin:20}, durability:40, onCraft:()=>{ playerTools.pickaxe = 40; renderHotbar(); if (typeof scheduleSave === 'function') scheduleSave(); } },
     { id:'rod', name:'Cần câu', icon:'🎣', desc:'Đứng cạnh nước để câu cá (độ bền 40)',
-      cost:{coin:25}, durability:40, onCraft:()=>{ playerTools.rod = 40; renderHotbar(); } },
+      cost:{coin:25}, durability:40, onCraft:()=>{ playerTools.rod = 40; renderHotbar(); if (typeof scheduleSave === 'function') scheduleSave(); } },
   ];
   const playerTools = { axe:0, pickaxe:0, rod:0 }; // 0 = chưa có / đã hỏng; số còn lại = độ bền dùng được
 
@@ -530,6 +532,7 @@
     farmPlots[plotIdx] = { seed: seedId, plantedAt: Date.now() };
     renderInventory();
     showMessage(`Đã trồng ${ITEM_META[seedId].icon} ${ITEM_META[seedId].name}!`, 1400);
+    if (typeof scheduleSave === 'function') scheduleSave();
   }
   function harvestAt(plotIdx) {
     const st = farmPlots[plotIdx];
@@ -1049,6 +1052,7 @@
     } else {
       renderHotbar();
     }
+    if (typeof scheduleSave === 'function') scheduleSave();
   }
 
   function gatherNode(node) {
@@ -1476,18 +1480,17 @@
   if (backBtn) {
     backBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      // Đợi lưu xong rồi mới rời trang, tránh mất tiến trình khi đăng xuất / trở về
-      const goBack = () => { window.location.href = '/ltl'; };
+      // Đợi lưu xong rồi mới rời trang, tránh mất tiến trình khi đổi tài khoản
+      let left = false;
+      const goBack = () => {
+        if (left) return;
+        left = true;
+        window.location.href = '/ltl';
+      };
       if (!saveRef || !progressReady) { goBack(); return; }
-      saveRef.set({
-        inventory,
-        tools: playerTools,
-        farm: farmPlots,
-        pos: { x: player.x, y: player.y },
-        updatedAt: firebase.database.ServerValue.TIMESTAMP
-      }).then(goBack).catch(goBack);
-      // timeout an toàn nếu mạng chậm
-      setTimeout(goBack, 2500);
+      clearTimeout(saveDebounceTimer);
+      saveProgress().then(goBack).catch(goBack);
+      setTimeout(goBack, 3000); // an toàn nếu mạng chậm
     });
   }
 
@@ -1557,19 +1560,30 @@
   }
 
   function saveProgress() {
-    if (!saveRef || !progressReady) return;
-    saveRef.set({
-      inventory,
-      tools: playerTools,
-      farm: farmPlots,
+    if (!saveRef || !progressReady) return Promise.resolve();
+    // Clone plain data để tránh reference bị đổi giữa chừng khi ghi Firebase
+    const payload = {
+      inventory: Object.assign({}, inventory),
+      tools: Object.assign({}, playerTools),
+      farm: JSON.parse(JSON.stringify(farmPlots)),
       pos: { x: player.x, y: player.y },
       updatedAt: firebase.database.ServerValue.TIMESTAMP
-    }).catch(()=>{});
+    };
+    return saveRef.set(payload).catch(()=>{});
   }
 
-  // tự động lưu định kỳ + khi rời trang (chỉ khi đã load xong)
-  setInterval(saveProgress, 15000);
-  window.addEventListener('beforeunload', saveProgress);
+  // Lưu ngay (debounce ~0.5s) mỗi khi túi đồ / công cụ / nông trại đổi
+  let saveDebounceTimer = null;
+  function scheduleSave() {
+    if (!saveRef || !progressReady) return;
+    clearTimeout(saveDebounceTimer);
+    saveDebounceTimer = setTimeout(() => { saveProgress(); }, 500);
+  }
+
+  // tự động lưu định kỳ + khi rời trang / ẩn tab (chỉ khi đã load xong)
+  setInterval(saveProgress, 5000);
+  window.addEventListener('beforeunload', () => { saveProgress(); });
+  window.addEventListener('pagehide', () => { saveProgress(); });
   document.addEventListener('visibilitychange', () => { if (document.hidden) saveProgress(); });
 
   // ---------- THẾ GIỚI CHUNG (MULTIPLAYER REALTIME) ----------
