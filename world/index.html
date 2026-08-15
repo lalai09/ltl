@@ -484,18 +484,18 @@
   // ---------- CỬA HÀNG: BÁN TÀI NGUYÊN & MUA ĐỒ ----------
   // Bán gỗ/đá lấy xu, rồi dùng xu mua công cụ & công trình
   const sellOffers = [
-    { id:'sell_wood', from:'wood', name:'Bán Gỗ', icon:'🪵', price:2 },
-    { id:'sell_stone', from:'stone', name:'Bán Đá', icon:'🪨', price:3 },
-    { id:'sell_fish', from:'fish', name:'Bán Cá', icon:'🐟', price:4 },
+    { id:'sell_wood', from:'wood', name:'Bán Gỗ', icon:'🪵', price:1 },
+    { id:'sell_stone', from:'stone', name:'Bán Đá', icon:'🪨', price:1 },
+    { id:'sell_fish', from:'fish', name:'Bán Cá', icon:'🐟', price:2 },
     { id:'sell_rice', from:'rice', name:'Bán Lúa', icon:'🌾', price:5 },
   ];
   const recipes = [
     { id:'axe', name:'Rìu gỗ', icon:'🪓', desc:'Chặt cây nhanh & mạnh hơn (độ bền 40)',
-      cost:{coin:35}, durability:40, onCraft:()=>{ playerTools.axe = 40; renderHotbar(); } },
+      cost:{coin:20}, durability:40, onCraft:()=>{ playerTools.axe = 40; renderHotbar(); } },
     { id:'pickaxe', name:'Cuốc gỗ', icon:'⛏️', desc:'Đào đá nhanh & mạnh hơn (độ bền 40)',
-      cost:{coin:45}, durability:40, onCraft:()=>{ playerTools.pickaxe = 40; renderHotbar(); } },
-    { id:'rod', name:'Cần câu', icon:'🎣', desc:'Đứng cạnh nước để câu cá (độ bền 30)',
-      cost:{coin:40}, durability:30, onCraft:()=>{ playerTools.rod = 30; renderHotbar(); } },
+      cost:{coin:20}, durability:40, onCraft:()=>{ playerTools.pickaxe = 40; renderHotbar(); } },
+    { id:'rod', name:'Cần câu', icon:'🎣', desc:'Đứng cạnh nước để câu cá (độ bền 40)',
+      cost:{coin:25}, durability:40, onCraft:()=>{ playerTools.rod = 30; renderHotbar(); } },
   ];
   const playerTools = { axe:0, pickaxe:0, rod:0 }; // 0 = chưa có / đã hỏng; số còn lại = độ bền dùng được
 
