@@ -439,8 +439,8 @@
   spawnResourceNodes();
 
   const RESOURCE_STYLE = {
-    wood:  { icon:'🌳', deadIcon:'🪵', give:'wood',  giveName:'Gỗ',  giveIcon:'🪵', amount:[1,2], respawn: 12 },
-    stone: { icon:'🪨', deadIcon:'⛏️', give:'stone', giveName:'Đá',  giveIcon:'🪨', amount:[1,2], respawn: 16 }
+    wood:  { icon:'🌳', deadIcon:'🪵', give:'wood',  giveName:'Gỗ',  giveIcon:'🪵', amount:[1,1], respawn: 60 },
+    stone: { icon:'🪨', deadIcon:'⛏️', give:'stone', giveName:'Đá',  giveIcon:'🪨', amount:[1,1], respawn: 60 }
   };
 
   // ---------- TÚI ĐỒ (INVENTORY) ----------
@@ -1468,15 +1468,28 @@
   let myId = '';    // tên hiển thị (giống trang chat)
   let myKey = '';   // key an toàn dùng làm đường dẫn Firebase
   let saveRef = null;
+  // Chỉ cho phép lưu sau khi đã tải xong (hoặc xác nhận chưa có save),
+  // tránh ghi đè tiến trình thật bằng dữ liệu mặc định khi vừa vào game.
+  let progressReady = false;
 
   const backBtn = document.getElementById('backBtn');
-if (backBtn) {
-  backBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    saveProgress();
-    window.location.href = '/ltl';
-  });
-}
+  if (backBtn) {
+    backBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      // Đợi lưu xong rồi mới rời trang, tránh mất tiến trình khi đăng xuất / trở về
+      const goBack = () => { window.location.href = '/ltl'; };
+      if (!saveRef || !progressReady) { goBack(); return; }
+      saveRef.set({
+        inventory,
+        tools: playerTools,
+        farm: farmPlots,
+        pos: { x: player.x, y: player.y },
+        updatedAt: firebase.database.ServerValue.TIMESTAMP
+      }).then(goBack).catch(goBack);
+      // timeout an toàn nếu mạng chậm
+      setTimeout(goBack, 2500);
+    });
+  }
 
   // Đăng nhập bằng tài khoản đã đăng nhập sẵn ở trang chat (đọc chung localStorage,
   // không cần đăng nhập lại). Nếu chưa đăng nhập ở trang chat thì quay lại trang chat.
@@ -1507,27 +1520,44 @@ if (backBtn) {
   })();
 
   function loadProgress() {
-    if (!saveRef) return;
+    if (!saveRef) {
+      progressReady = true;
+      return;
+    }
     saveRef.once('value').then(snap => {
-      if (!snap.exists()) return;
-      const data = snap.val();
-      if (data.inventory) Object.assign(inventory, data.inventory);
-      if (data.tools) Object.assign(playerTools, data.tools);
-      if (data.farm) Object.assign(farmPlots, data.farm); // chỗ trồng riêng của tài khoản này
-      // dọn dẹp các vật phẩm cũ không còn dùng nữa (đã lỡ lưu từ bản trước)
-      ['fiber','seed_corn','seed_potato','axe','pickaxe','rod'].forEach(k => delete inventory[k]);
-      if (data.pos && typeof data.pos.x === 'number') {
-        player.x = data.pos.x;
-        player.y = data.pos.y;
+      if (snap.exists()) {
+        const data = snap.val() || {};
+        // Thay thế hẳn inventory/tools/farm bằng bản đã lưu (không giữ mặc định lẫn vào)
+        if (data.inventory && typeof data.inventory === 'object') {
+          Object.keys(inventory).forEach(k => delete inventory[k]);
+          Object.assign(inventory, data.inventory);
+        }
+        if (data.tools && typeof data.tools === 'object') {
+          Object.assign(playerTools, { axe:0, pickaxe:0, rod:0 }, data.tools);
+        }
+        if (data.farm && typeof data.farm === 'object') {
+          Object.keys(farmPlots).forEach(k => delete farmPlots[k]);
+          Object.assign(farmPlots, data.farm);
+        }
+        // dọn dẹp các vật phẩm cũ không còn dùng nữa (đã lỡ lưu từ bản trước)
+        ['fiber','seed_corn','seed_potato','axe','pickaxe','rod'].forEach(k => delete inventory[k]);
+        if (data.pos && typeof data.pos.x === 'number' && typeof data.pos.y === 'number') {
+          player.x = data.pos.x;
+          player.y = data.pos.y;
+        }
+        showMessage('☁️ Đã tải tiến trình đã lưu', 1600);
       }
       renderInventory();
       renderHotbar();
-      showMessage('☁️ Đã tải tiến trình đã lưu', 1600);
-    }).catch(()=>{});
+      progressReady = true;
+    }).catch(() => {
+      // Lỗi mạng: vẫn cho chơi & lưu (coi như tài khoản mới / chưa có save)
+      progressReady = true;
+    });
   }
 
   function saveProgress() {
-    if (!saveRef) return;
+    if (!saveRef || !progressReady) return;
     saveRef.set({
       inventory,
       tools: playerTools,
@@ -1537,7 +1567,7 @@ if (backBtn) {
     }).catch(()=>{});
   }
 
-  // tự động lưu định kỳ + khi rời trang
+  // tự động lưu định kỳ + khi rời trang (chỉ khi đã load xong)
   setInterval(saveProgress, 15000);
   window.addEventListener('beforeunload', saveProgress);
   document.addEventListener('visibilitychange', () => { if (document.hidden) saveProgress(); });
