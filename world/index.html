@@ -333,13 +333,14 @@
   const WORLD_W = TILE * WORLD_COLS;
   const WORLD_H = TILE * WORLD_ROWS;
 
-  // Loại tile: 0 = cỏ, 1 = nước, 2 = cát, 3 = rừng, 4 = đá
+  // Loại tile: 0 = cỏ, 1 = nước, 2 = cát, 3 = rừng, 4 = đá, 5 = đất nông trại
   const TILE_COLORS = {
     0: '#5fb35f',
     1: '#3a7bd5',
     2: '#e0c58a',
     3: '#2e7d32',
-    4: '#8a8a8a'
+    4: '#8a8a8a',
+    5: '#6b4a2b'
   };
   const TILE_SOLID = { 1:true, 4:true }; // tile không đi qua được (nước, đá)
 
@@ -402,7 +403,7 @@
     const ty = Math.floor(py / TILE);
     if (tx < 0 || ty < 0 || tx >= WORLD_COLS || ty >= WORLD_ROWS) return 'Vùng chưa khám phá';
     const t = worldMap[ty][tx];
-    return { 0:'Đồng cỏ', 1:'Hồ nước', 2:'Bãi cát', 3:'Rừng cây', 4:'Vùng đá' }[t];
+    return { 0:'Đồng cỏ', 1:'Hồ nước', 2:'Bãi cát', 3:'Rừng cây', 4:'Vùng đá', 5:'Nông trại' }[t];
   }
 
   // ---------- TÀI NGUYÊN THU THẬP ĐƯỢC (CÂY, ĐÁ) ----------
@@ -506,6 +507,45 @@
     { id:'seed_corn',   name:'Hạt giống ngô', icon:'🌽', price:4 },
     { id:'seed_potato', name:'Hạt giống khoai', icon:'🥔', price:4 },
   ];
+
+  // ---------- DỮ LIỆU CÂY TRỒNG (thời gian lớn tính bằng giây, sản lượng thu hoạch) ----------
+  const CROP_META = {
+    seed_rice:   { growTime:45, yieldMin:2, yieldMax:4 },
+    seed_corn:   { growTime:60, yieldMin:2, yieldMax:4 },
+    seed_potato: { growTime:75, yieldMin:3, yieldMax:5 },
+  };
+  const SEED_PRIORITY = ['seed_rice', 'seed_corn', 'seed_potato']; // thứ tự ưu tiên tự trồng
+
+  // Trạng thái các ô đất CỦA RIÊNG tài khoản này: { [plotIdx]: {seed, plantedAt} }
+  // -> lưu/đọc qua saveRef (game_open_world/{myKey}) giống inventory, nên mỗi
+  //    tài khoản đăng nhập khác nhau sẽ có chỗ trồng hoàn toàn độc lập.
+  const farmPlots = {};
+
+  function farmPlotStatus(idx) {
+    const st = farmPlots[idx];
+    if (!st || !CROP_META[st.seed]) return { state:'empty' };
+    const meta = CROP_META[st.seed];
+    const elapsed = (Date.now() - st.plantedAt) / 1000;
+    if (elapsed >= meta.growTime) return { state:'ready', seed: st.seed };
+    return { state:'growing', seed: st.seed, progress: Math.min(1, elapsed / meta.growTime) };
+  }
+  function plantAt(plotIdx) {
+    const seedId = SEED_PRIORITY.find(id => (inventory[id]||0) > 0);
+    if (!seedId) { showMessage('🌱 Bạn hết hạt giống rồi! Ghé Cửa hàng mua thêm.', 1800); return; }
+    inventory[seedId] -= 1;
+    farmPlots[plotIdx] = { seed: seedId, plantedAt: Date.now() };
+    renderInventory();
+    showMessage(`Đã trồng ${ITEM_META[seedId].icon} ${ITEM_META[seedId].name}!`, 1400);
+  }
+  function harvestAt(plotIdx) {
+    const st = farmPlots[plotIdx];
+    if (!st || !CROP_META[st.seed]) return;
+    const meta = CROP_META[st.seed];
+    const amount = meta.yieldMin + Math.floor(Math.random() * (meta.yieldMax - meta.yieldMin + 1));
+    delete farmPlots[plotIdx];
+    addItem(st.seed, amount);
+    showMessage(`🌾 Thu hoạch được ${amount} ${ITEM_META[st.seed].icon} ${ITEM_META[st.seed].name}!`, 1800);
+  }
 
   // ---------- HOTBAR (thanh ô đồ trang bị) ----------
   // Chỉ những công cụ cầm-tay mới vào hotbar; "equipped" là công cụ đang cầm
@@ -655,6 +695,35 @@
     { x: SHOP_X, y: SHOP_Y, r: 18, type:'shop', icon:'🏪', name:'Cửa hàng', color:'#d4a017' }
   ];
 
+  // ---------- NÔNG TRẠI (khu đất trồng, phía TÂY/TRÁI bản đồ) ----------
+  // Mỗi tài khoản có trạng thái cây trồng RIÊNG (farmPlots lưu theo saveRef
+  // của từng người, không chia sẻ với người chơi khác) — vị trí vật lý các ô
+  // đất là chung, nhưng chỉ chủ tài khoản mới thấy/thu hoạch cây của mình.
+  const FARM_TX0 = 2, FARM_TY0 = 22, FARM_COLS = 4, FARM_ROWS = 3;
+  for (let ty = FARM_TY0-1; ty <= FARM_TY0+FARM_ROWS; ty++) {
+    for (let tx = FARM_TX0-1; tx <= FARM_TX0+FARM_COLS; tx++) {
+      if (tx>=0 && ty>=0 && tx<WORLD_COLS && ty<WORLD_ROWS) {
+        const inPlot = tx>=FARM_TX0 && tx<FARM_TX0+FARM_COLS && ty>=FARM_TY0 && ty<FARM_TY0+FARM_ROWS;
+        worldMap[ty][tx] = inPlot ? 5 : 0; // 5 = đất canh tác, viền quanh dọn thành cỏ
+      }
+    }
+  }
+  const FARM_PLOTS = [];
+  (function setupFarmPlots(){
+    let idx = 0;
+    for (let ty = FARM_TY0; ty < FARM_TY0+FARM_ROWS; ty++) {
+      for (let tx = FARM_TX0; tx < FARM_TX0+FARM_COLS; tx++) {
+        FARM_PLOTS.push({ idx: idx++, tx, ty, x: tx*TILE+TILE/2, y: ty*TILE+TILE/2 });
+      }
+    }
+  })();
+  interactables.push({
+    x: (FARM_TX0 + FARM_COLS/2)*TILE, y: (FARM_TY0-1)*TILE + TILE/2,
+    r: 14, type:'sign', icon:'🌱', name:'Nông trại',
+    color:'#6b8e23',
+    msg:'🌱 Nông trại: đứng lên ô đất nâu rồi bấm Dùng để trồng hạt giống đang có, bấm lại khi cây chín để thu hoạch. Chỗ trồng này chỉ mình bạn thấy!'
+  });
+
   // ---------- NHÂN VẬT ----------
   const player = {
     x: WORLD_W/2, y: WORLD_H/2, // vị trí giữa bản đồ
@@ -777,6 +846,24 @@
 
     // Ưu tiên 0: câu cá nếu đang cầm cần câu và đứng gần mặt nước
     if (equipped === 'rod' && isNearWater(player.x, player.y)) { doFishing(); return; }
+
+    // Ưu tiên 0.5: ô đất nông trại gần nhất (trồng / thu hoạch)
+    let nearestPlot = null, nearestPlotD = 999999;
+    for (const p of FARM_PLOTS) {
+      const d = Math.hypot(player.x - p.x, player.y - p.y);
+      if (d < 34 && d < nearestPlotD) { nearestPlotD = d; nearestPlot = p; }
+    }
+    if (nearestPlot) {
+      const status = farmPlotStatus(nearestPlot.idx);
+      if (status.state === 'empty') { plantAt(nearestPlot.idx); }
+      else if (status.state === 'ready') { harvestAt(nearestPlot.idx); }
+      else {
+        const meta = CROP_META[status.seed];
+        const left = Math.max(0, Math.ceil(meta.growTime * (1 - status.progress)));
+        showMessage(`${ITEM_META[status.seed].icon} Đang lớn... còn ~${left}s`, 1300);
+      }
+      return;
+    }
 
     // Ưu tiên 1: tài nguyên (cây/đá) gần nhất trong tầm tay
     let nearestNode = null, nearestD = 999999;
@@ -1067,6 +1154,40 @@
     }
   }
 
+  function drawFarmPlots() {
+    for (const p of FARM_PLOTS) {
+      const sx = p.x - camera.x, sy = p.y - camera.y;
+      if (sx < -40 || sy < -40 || sx > canvas.width+40 || sy > canvas.height+40) continue;
+      const status = farmPlotStatus(p.idx);
+
+      if (status.state === 'growing' || status.state === 'ready') {
+        ctx.font = '20px Arial';
+        ctx.textAlign = 'center';
+        ctx.globalAlpha = status.state === 'ready' ? 1 : (0.55 + status.progress*0.45);
+        ctx.fillText(status.state === 'ready' ? '✅' : ITEM_META[status.seed].icon, sx, sy+7);
+        ctx.globalAlpha = 1;
+
+        if (status.state === 'growing') {
+          const bw = 26;
+          ctx.fillStyle = 'rgba(0,0,0,.5)';
+          ctx.fillRect(sx-bw/2, sy-20, bw, 4);
+          ctx.fillStyle = '#8bc34a';
+          ctx.fillRect(sx-bw/2, sy-20, bw*status.progress, 4);
+        }
+      }
+
+      const d = Math.hypot(player.x - p.x, player.y - p.y);
+      if (d < 34) {
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+        ctx.setLineDash([4,4]);
+        ctx.arc(sx, sy, 20, 0, Math.PI*2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+  }
+
 
   // ---------- CAMERA ----------
   const camera = { x:0, y:0 };
@@ -1302,6 +1423,7 @@
   function render() {
     ctx.clearRect(0,0,canvas.width, canvas.height);
     drawWorld();
+    drawFarmPlots();
     drawResourceNodes();
     drawInteractables();
     drawOtherPlayers();
@@ -1386,6 +1508,7 @@ if (backBtn) {
       const data = snap.val();
       if (data.inventory) Object.assign(inventory, data.inventory);
       if (data.tools) Object.assign(playerTools, data.tools);
+      if (data.farm) Object.assign(farmPlots, data.farm); // chỗ trồng riêng của tài khoản này
       if (data.pos && typeof data.pos.x === 'number') {
         player.x = data.pos.x;
         player.y = data.pos.y;
@@ -1401,6 +1524,7 @@ if (backBtn) {
     saveRef.set({
       inventory,
       tools: playerTools,
+      farm: farmPlots,
       pos: { x: player.x, y: player.y },
       updatedAt: firebase.database.ServerValue.TIMESTAMP
     }).catch(()=>{});
