@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>World</title>
+<title>Worldhaha</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   html,body {
@@ -491,11 +491,11 @@
   ];
   const recipes = [
     { id:'axe', name:'Rìu gỗ', icon:'🪓', desc:'Chặt cây nhanh & mạnh hơn (độ bền 40)',
-      cost:{coin:35}, durability:40, onCraft:()=>{ playerTools.axe = 40; addItem('axe',1); } },
+      cost:{coin:35}, durability:40, onCraft:()=>{ playerTools.axe = 40; renderHotbar(); } },
     { id:'pickaxe', name:'Cuốc gỗ', icon:'⛏️', desc:'Đào đá nhanh & mạnh hơn (độ bền 40)',
-      cost:{coin:45}, durability:40, onCraft:()=>{ playerTools.pickaxe = 40; addItem('pickaxe',1); } },
+      cost:{coin:45}, durability:40, onCraft:()=>{ playerTools.pickaxe = 40; renderHotbar(); } },
     { id:'rod', name:'Cần câu', icon:'🎣', desc:'Đứng cạnh nước để câu cá (độ bền 30)',
-      cost:{coin:40}, durability:30, onCraft:()=>{ playerTools.rod = 30; addItem('rod',1); } },
+      cost:{coin:40}, durability:30, onCraft:()=>{ playerTools.rod = 30; renderHotbar(); } },
   ];
   const playerTools = { axe:0, pickaxe:0, rod:0 }; // 0 = chưa có / đã hỏng; số còn lại = độ bền dùng được
 
@@ -1498,6 +1498,8 @@ if (backBtn) {
       if (data.inventory) Object.assign(inventory, data.inventory);
       if (data.tools) Object.assign(playerTools, data.tools);
       if (data.farm) Object.assign(farmPlots, data.farm); // chỗ trồng riêng của tài khoản này
+      // dọn dẹp các vật phẩm cũ không còn dùng nữa (đã lỡ lưu từ bản trước)
+      ['fiber','seed_corn','seed_potato','axe','pickaxe','rod'].forEach(k => delete inventory[k]);
       if (data.pos && typeof data.pos.x === 'number') {
         player.x = data.pos.x;
         player.y = data.pos.y;
