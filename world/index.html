@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>World</title>
+<title>Worldhihi</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   html,body {
@@ -444,19 +444,17 @@
   };
 
   // ---------- TÚI ĐỒ (INVENTORY) ----------
-  const inventory = { wood:0, stone:0, fiber:0, coin:20 };
+  const inventory = { wood:0, stone:0, coin:20 };
   const ITEM_META = {
     wood:  { icon:'🪵', name:'Gỗ' },
     stone: { icon:'🪨', name:'Đá' },
-    fiber: { icon:'🌾', name:'Sợi cỏ' },
     fish:  { icon:'🐟', name:'Cá' },
     coin:  { icon:'💰', name:'Xu' },
     axe:   { icon:'🪓', name:'Rìu' },
     pickaxe:{icon:'⛏️', name:'Cuốc' },
     rod:   { icon:'🎣', name:'Cần câu' },
-    seed_rice:   { icon:'🌱', name:'Hạt giống lúa' },
-    seed_corn:   { icon:'🌽', name:'Hạt giống ngô' },
-    seed_potato: { icon:'🥔', name:'Hạt giống khoai' }
+    seed_rice: { icon:'🌱', name:'Hạt giống lúa' },
+    rice:      { icon:'🌾', name:'Lúa' }
   };
   function addItem(id, n) {
     inventory[id] = (inventory[id]||0) + n;
@@ -489,7 +487,7 @@
     { id:'sell_wood', from:'wood', name:'Bán Gỗ', icon:'🪵', price:2 },
     { id:'sell_stone', from:'stone', name:'Bán Đá', icon:'🪨', price:3 },
     { id:'sell_fish', from:'fish', name:'Bán Cá', icon:'🐟', price:4 },
-    { id:'sell_fiber', from:'fiber', name:'Bán Sợi cỏ', icon:'🌾', price:1 },
+    { id:'sell_rice', from:'rice', name:'Bán Lúa', icon:'🌾', price:5 },
   ];
   const recipes = [
     { id:'axe', name:'Rìu gỗ', icon:'🪓', desc:'Chặt cây nhanh & mạnh hơn (độ bền 40)',
@@ -503,18 +501,14 @@
 
   // Hạt giống: vật phẩm tiêu hao, mua bao nhiêu lần cũng được, cộng dồn vào túi đồ
   const seedOffers = [
-    { id:'seed_rice',   name:'Hạt giống lúa', icon:'🌱', price:3 },
-    { id:'seed_corn',   name:'Hạt giống ngô', icon:'🌽', price:4 },
-    { id:'seed_potato', name:'Hạt giống khoai', icon:'🥔', price:4 },
+    { id:'seed_rice', name:'Hạt giống lúa', icon:'🌱', price:3 },
   ];
 
   // ---------- DỮ LIỆU CÂY TRỒNG (thời gian lớn tính bằng giây, sản lượng thu hoạch) ----------
   const CROP_META = {
-    seed_rice:   { growTime:45, yieldMin:2, yieldMax:4 },
-    seed_corn:   { growTime:60, yieldMin:2, yieldMax:4 },
-    seed_potato: { growTime:75, yieldMin:3, yieldMax:5 },
+    seed_rice: { growTime:45, yieldMin:2, yieldMax:4, harvestId:'rice' },
   };
-  const SEED_PRIORITY = ['seed_rice', 'seed_corn', 'seed_potato']; // thứ tự ưu tiên tự trồng
+  const SEED_PRIORITY = ['seed_rice']; // thứ tự ưu tiên tự trồng
 
   // Trạng thái các ô đất CỦA RIÊNG tài khoản này: { [plotIdx]: {seed, plantedAt} }
   // -> lưu/đọc qua saveRef (game_open_world/{myKey}) giống inventory, nên mỗi
@@ -543,8 +537,8 @@
     const meta = CROP_META[st.seed];
     const amount = meta.yieldMin + Math.floor(Math.random() * (meta.yieldMax - meta.yieldMin + 1));
     delete farmPlots[plotIdx];
-    addItem(st.seed, amount);
-    showMessage(`🌾 Thu hoạch được ${amount} ${ITEM_META[st.seed].icon} ${ITEM_META[st.seed].name}!`, 1800);
+    addItem(meta.harvestId, amount);
+    showMessage(`🌾 Thu hoạch được ${amount} ${ITEM_META[meta.harvestId].icon} ${ITEM_META[meta.harvestId].name}!`, 1800);
   }
 
   // ---------- HOTBAR (thanh ô đồ trang bị) ----------
@@ -1063,7 +1057,7 @@
       addItem(style.give, n);
       showMessage(`${style.icon} Nhận ${n} ${style.giveIcon} ${style.giveName}!`, 1400);
       // 25% cơ hội rớt thêm sợi cỏ khi chặt cây
-      if (node.type === 'wood' && Math.random() < 0.25) addItem('fiber', 1);
+
     } else {
       showMessage(`${style.icon} ${node.type==='wood'?'Đang chặt cây':'Đang đào đá'}... (${node.hp}/${node.maxHp})`, 700);
     }
